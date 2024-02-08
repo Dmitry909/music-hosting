@@ -17,7 +17,7 @@ async fn main() {
     
 }
 
-async fn root() -> &'static str {
+asyc fn root() -> &'static str {
     "Hello, world!"
 }
 
