@@ -13,15 +13,15 @@ struct AppState {
     users: HashMap<String, String>,
 }
 
-type SharedStateType = Arc<RwLock<AppState>>;
+type SharedState = Arc<RwLock<AppState>>;
 
 #[tokio::main]
 async fn main() {
-    let shared_state = SharedStateType::default();
+    let shared_state = SharedState::default();
 
     let app = Router::new()
         .route("/", get(root))
-        .route("/users", post(singup))
+        .route("/singup", post(singup))
         .with_state(shared_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -33,14 +33,14 @@ async fn root() -> &'static str {
 }
 
 async fn singup(
-    State(state): State<SharedStateType>,
-    Json(payload): Json<SingupRequest>,
+    State(state): State<SharedState>,
+    Json(input_payload): Json<SingupRequest>,
 ) -> impl IntoResponse {
     let users = &mut state.write().unwrap().users;
-    users.insert(payload.username.clone(), payload.password);
+    users.insert(input_payload.username.clone(), input_payload.password);
 
     let response = SingupResponse {
-        username: payload.username,
+        username: input_payload.username,
     };
 
     (StatusCode::CREATED, Json(response))
