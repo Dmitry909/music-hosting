@@ -1,0 +1,34 @@
+### OK
+POST http://0.0.0.0:3000/singup
+Content-Type: application/json
+
+{
+    "username": "alex",
+    "password": "alex1990"
+}
+
+### no password
+POST http://0.0.0.0:3000/singup
+Content-Type: application/json
+
+{
+    "username": "alex_no_password"
+}
+
+### no username
+POST http://0.0.0.0:3000/singup
+Content-Type: application/json
+
+{
+    "password": "no_username"
+}
+
+### excess field
+POST http://0.0.0.0:3000/singup
+Content-Type: application/json
+
+{
+    "username": "alex",
+    "password": "alex1990",
+    "excess_field": "123"
+}
