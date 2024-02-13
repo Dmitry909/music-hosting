@@ -56,3 +56,33 @@ struct SingupRequest {
 struct SingupResponse {
     username: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
+
+    fn send_get_request(uri: &str) -> Request<Body> {
+        Request::builder()
+            .uri(uri)
+            .method("GET")
+            .body(Body::empty())
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn get_by_name_success() {
+        let shared_state = SharedState::default();
+
+        let app = Router::new()
+            .route("/", get(root))
+            .route("/singup", post(singup))
+            .with_state(shared_state);
+
+        let response = app.oneshot(send_get_request("/")).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}
