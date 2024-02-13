@@ -20,7 +20,6 @@ async fn main() {
     let shared_state = SharedState::default();
 
     let app = Router::new()
-        .route("/", get(root))
         .route("/singup", post(singup))
         .with_state(shared_state);
 
@@ -28,22 +27,21 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn root() -> &'static str {
-    "Hello, world!"
-}
-
 async fn singup(
     State(state): State<SharedState>,
     Json(input_payload): Json<SingupRequest>,
 ) -> impl IntoResponse {
     let users = &mut state.write().unwrap().users;
+    if users.contains_key(&input_payload.username) {
+        return StatusCode::CONFLICT.into_response();
+    }
     users.insert(input_payload.username.clone(), input_payload.password);
 
     let response = SingupResponse {
         username: input_payload.username,
     };
 
-    (StatusCode::CREATED, Json(response))
+    (StatusCode::CREATED, Json(response)).into_response()
 }
 
 #[derive(Deserialize)]
@@ -52,7 +50,7 @@ struct SingupRequest {
     password: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct SingupResponse {
     username: String,
 }
@@ -60,29 +58,54 @@ struct SingupResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::Body;
     use axum::http::StatusCode;
-    use axum::{body::Body, http::Request};
+    use axum::http::{self, Request};
+    use http_body_util::BodyExt;
+    use mime;
     use tower::ServiceExt;
 
-    fn send_get_request(uri: &str) -> Request<Body> {
+    fn make_get_request(uri: &str) -> Request<Body> {
         Request::builder()
-            .uri(uri)
             .method("GET")
+            .uri(uri)
             .body(Body::empty())
             .unwrap()
     }
 
+    fn make_post_request(uri: &str, body: Body) -> Request<Body> {
+        Request::builder()
+            .method("POST")
+            .uri(uri)
+            .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .body(body)
+            .unwrap()
+    }
+
     #[tokio::test]
-    async fn get_by_name_success() {
+    async fn singup_user_different_bodies() {
         let shared_state = SharedState::default();
 
         let app = Router::new()
-            .route("/", get(root))
             .route("/singup", post(singup))
             .with_state(shared_state);
 
-        let response = app.oneshot(send_get_request("/")).await.unwrap();
+        {
+            let response = app
+                .oneshot(make_post_request("/singup", Body::empty()))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        assert_eq!(response.status(), StatusCode::OK);
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            // let json_body: Json<SingupResponse> = Json::from_bytes(&body).unwrap();
+            // assert_eq!(json_body.0.username, "abc");
+            assert_eq!(&body[..], b"Failed to parse the request body as JSON: EOF while parsing a value at line 1 column 0");
+        }
+
+        // {
+        //     let response = app.oneshot(make_post_request("/singup", Body::from("abc"))).await.unwrap();
+        //     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        // }
     }
 }
