@@ -14,6 +14,12 @@ Content-Type: application/json
 {
 }
 
+### corrupted body
+POST http://0.0.0.0:3000/singup
+Content-Type: application/json
+
+{qwerty}
+
 ### no password
 POST http://0.0.0.0:3000/singup
 Content-Type: application/json
