@@ -5,27 +5,39 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use ring::digest::{Context, Digest, SHA256};
 use serde::{Deserialize, Serialize};
 use std::str;
 use std::{collections::HashMap, sync::Arc, sync::RwLock};
 
 #[derive(Default)]
 struct AppState {
-    users: HashMap<String, String>,
+    users: HashMap<String, Digest>,
 }
 
 type SharedState = Arc<RwLock<AppState>>;
 
+fn create_app() -> Router {
+    let shared_state = SharedState::default();
+    Router::new()
+        .route("/singup", post(singup))
+        .with_state(shared_state)
+}
+
 #[tokio::main]
 async fn main() {
-    let shared_state = SharedState::default();
-
-    let app = Router::new()
-        .route("/singup", post(singup))
-        .with_state(shared_state);
+    let app = create_app();
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+fn get_hash(username: &String, password: &String) -> Digest {
+    let mut context = Context::new(&SHA256);
+    context.update(username.as_bytes());
+    context.update(b"qIy074EXAsMI");
+    context.update(password.as_bytes());
+    context.finish()
 }
 
 async fn singup(
@@ -36,7 +48,10 @@ async fn singup(
     if users.contains_key(&input_payload.username) {
         return StatusCode::CONFLICT.into_response();
     }
-    users.insert(input_payload.username.clone(), input_payload.password);
+    users.insert(
+        input_payload.username.clone(),
+        get_hash(&input_payload.username, &input_payload.password),
+    );
 
     let response = SingupResponse {
         username: input_payload.username,
@@ -65,13 +80,6 @@ mod tests {
     use http_body_util::BodyExt;
     use mime;
     use tower::{Service, ServiceExt};
-
-    fn create_app() -> Router {
-        let shared_state = SharedState::default();
-        Router::new()
-            .route("/singup", post(singup))
-            .with_state(shared_state)
-    }
 
     fn create_get_request(uri: &str) -> Request<Body> {
         Request::builder()
