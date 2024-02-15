@@ -46,7 +46,7 @@ async fn singup(
 ) -> impl IntoResponse {
     let users = &mut state.write().unwrap().users;
     if users.contains_key(&input_payload.username) {
-        return StatusCode::CONFLICT.into_response();
+        return (StatusCode::CONFLICT, "Username exists").into_response();
     }
     users.insert(
         input_payload.username.clone(),
@@ -159,17 +159,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn singup_ok() {
+    async fn singup_the_same() {
         let mut app = create_app();
 
-        let requests = vec![create_post_request(
-            "/singup",
-            Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-        )];
+        let requests = vec![
+            create_post_request(
+                "/singup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/singup",
+                Body::from("{\"username\": \"alex\",\"password\": \"awesome_alex\"}"),
+            ),
+            create_post_request(
+                "/singup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+        ];
 
-        let expected_exit_codes = vec![StatusCode::CREATED];
+        let expected_exit_codes = vec![
+            StatusCode::CREATED,
+            StatusCode::CONFLICT,
+            StatusCode::CONFLICT,
+        ];
 
-        let expected_responses = vec!["{\"username\":\"alex\"}"];
+        let expected_responses = vec![
+            "{\"username\":\"alex\"}",
+            "Username exists",
+            "Username exists",
+        ];
 
         send_batch_requests(&mut app, requests, expected_exit_codes, expected_responses).await;
     }
