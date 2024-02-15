@@ -6,6 +6,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use std::str;
 use std::{collections::HashMap, sync::Arc, sync::RwLock};
 
 #[derive(Default)]
@@ -59,13 +60,20 @@ struct SingupResponse {
 mod tests {
     use super::*;
     use axum::body::Body;
-    use axum::http::StatusCode;
     use axum::http::{self, Request};
+    use axum::http::{request, StatusCode};
     use http_body_util::BodyExt;
     use mime;
-    use tower::ServiceExt;
+    use tower::{Service, ServiceExt};
 
-    fn make_get_request(uri: &str) -> Request<Body> {
+    fn create_app() -> Router {
+        let shared_state = SharedState::default();
+        Router::new()
+            .route("/singup", post(singup))
+            .with_state(shared_state)
+    }
+
+    fn create_get_request(uri: &str) -> Request<Body> {
         Request::builder()
             .method("GET")
             .uri(uri)
@@ -73,7 +81,7 @@ mod tests {
             .unwrap()
     }
 
-    fn make_post_request(uri: &str, body: Body) -> Request<Body> {
+    fn create_post_request(uri: &str, body: Body) -> Request<Body> {
         Request::builder()
             .method("POST")
             .uri(uri)
@@ -82,102 +90,82 @@ mod tests {
             .unwrap()
     }
 
+    async fn send_batch_requests(
+        app: &mut Router,
+        requests: Vec<Request<Body>>,
+        expected_exit_codes: Vec<StatusCode>,
+        expected_responses: Vec<&str>,
+    ) {
+        assert_eq!(requests.len(), expected_exit_codes.len());
+        assert_eq!(requests.len(), expected_responses.len());
+
+        let mut expected_exit_codes_iter = expected_exit_codes.into_iter();
+        let mut expected_responses_iter = expected_responses.into_iter();
+
+        for request in requests.into_iter() {
+            let response = ServiceExt::<Request<Body>>::ready(app)
+                .await
+                .unwrap()
+                .call(request)
+                .await
+                .unwrap();
+            assert_eq!(response.status(), expected_exit_codes_iter.next().unwrap());
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            let body_string = str::from_utf8(&body).unwrap();
+            assert_eq!(body_string, expected_responses_iter.next().unwrap());
+        }
+    }
+
     #[tokio::test]
-    async fn singup_user_different_bodies() {
-        // TODO: make app and shared_state common, have to use not one_shot
-        {
-            let shared_state = SharedState::default();
-            let app = Router::new()
-                .route("/singup", post(singup))
-                .with_state(shared_state);
-            let response = app
-                .oneshot(make_post_request("/singup", Body::empty()))
-                .await
-                .unwrap();
-            // TODO: why BAD_REQUEST here? Must be UNPROCESSABLE_ENTITY.
-            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    async fn singup_bad_requests() {
+        let mut app = create_app();
 
-            let body = response.into_body().collect().await.unwrap().to_bytes();
-            // let json_body: Json<SingupResponse> = Json::from_bytes(&body).unwrap();
-            // assert_eq!(json_body.0.username, "abc");
-            assert_eq!(&body[..], b"Failed to parse the request body as JSON: EOF while parsing a value at line 1 column 0");
-        }
+        let requests = vec![
+            create_post_request("/singup", Body::empty()),
+            create_post_request(
+                "/singup",
+                Body::from("{\"username\": \"alex_no_password\"}"),
+            ),
+            create_post_request("/singup", Body::from("{\"password\": \"no_username\"}")),
+            create_post_request("/singup", Body::from("qwerty")),
+            create_post_request("/singup", Body::from("{abc}")),
+        ];
 
-        {
-            let shared_state = SharedState::default();
-            let app = Router::new()
-                .route("/singup", post(singup))
-                .with_state(shared_state);
-            let response = app
-                .oneshot(make_post_request(
-                    "/singup",
-                    Body::from("{\"username\": \"alex_no_password\"}"),
-                ))
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let expected_exit_codes = vec![
+            StatusCode::BAD_REQUEST,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            StatusCode::BAD_REQUEST,
+            StatusCode::BAD_REQUEST,
+        ];
 
-            let body = response.into_body().collect().await.unwrap().to_bytes();
-            assert_eq!(&body[..], b"Failed to deserialize the JSON body into the target type: missing field `password` at line 1 column 32");
-        }
+        let expected_responses = vec![
+            "Failed to parse the request body as JSON: EOF while parsing a value at line 1 column 0",
+            "Failed to deserialize the JSON body into the target type: missing field `password` at line 1 column 32",
+            "Failed to deserialize the JSON body into the target type: missing field `username` at line 1 column 27",
+            "Failed to parse the request body as JSON: expected value at line 1 column 1",
+            "Failed to parse the request body as JSON: key must be a string at line 1 column 2",
+        ];
 
-        {
-            let shared_state = SharedState::default();
-            let app = Router::new()
-                .route("/singup", post(singup))
-                .with_state(shared_state);
-            let response = app
-                .oneshot(make_post_request(
-                    "/singup",
-                    Body::from("{\"password\": \"no_username\"}"),
-                ))
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_responses).await;
+    }
 
-            let body = response.into_body().collect().await.unwrap().to_bytes();
-            assert_eq!(&body[..], b"Failed to deserialize the JSON body into the target type: missing field `username` at line 1 column 27");
-        }
+    #[tokio::test]
+    async fn singup_ok() {
+        let mut app = create_app();
 
-        {
-            let shared_state = SharedState::default();
-            let app = Router::new()
-                .route("/singup", post(singup))
-                .with_state(shared_state);
-            let response = app
-                .oneshot(make_post_request(
-                    "/singup",
-                    Body::from("{\"password\": \"no_username\"}"),
-                ))
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let requests = vec![create_post_request(
+            "/singup",
+            Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+        )];
 
-            let body = response.into_body().collect().await.unwrap().to_bytes();
-            assert_eq!(&body[..], b"Failed to deserialize the JSON body into the target type: missing field `username` at line 1 column 27");
-        }
+        let expected_exit_codes = vec![StatusCode::CREATED];
 
-        {
-            let shared_state = SharedState::default();
-            let app = Router::new()
-                .route("/singup", post(singup))
-                .with_state(shared_state);
-            let response = app
-                .oneshot(make_post_request(
-                    "/singup",
-                    Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-                ))
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::CREATED);
+        let expected_responses = vec!["{\"username\":\"alex\"}"];
 
-            let body = response.into_body().collect().await.unwrap().to_bytes();
-            assert_eq!(&body[..], b"{\"username\":\"alex\"}");
-        }
-
-        // {
-        //     let response = app.oneshot(make_post_request("/singup", Body::from("abc"))).await.unwrap();
-        //     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-        // }
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_responses).await;
     }
 }
+
+//     let json_body: Json<SingupResponse> = Json::from_bytes(&body).unwrap();
+//     assert_eq!(json_body.0.username, "abc");
