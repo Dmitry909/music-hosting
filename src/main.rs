@@ -134,6 +134,15 @@ mod tests {
             .unwrap()
     }
 
+    fn create_delete_request(uri: &str, body: Body) -> Request<Body> {
+        Request::builder()
+            .method("DELETE")
+            .uri(uri)
+            .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .body(body)
+            .unwrap()
+    }
+
     async fn send_batch_requests(
         app: &mut Router,
         requests: Vec<Request<Body>>,
@@ -195,7 +204,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn singup_the_same() {
+    async fn singup_the_same_user() {
         let mut app = create_app();
 
         let requests = vec![
@@ -205,7 +214,7 @@ mod tests {
             ),
             create_post_request(
                 "/singup",
-                Body::from("{\"username\": \"alex\",\"password\": \"awesome_alex\"}"),
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
             ),
             create_post_request(
                 "/singup",
@@ -227,6 +236,53 @@ mod tests {
 
         send_batch_requests(&mut app, requests, expected_exit_codes, expected_responses).await;
     }
+
+    // #[tokio::test]
+    // async fn singup_and_delete() {
+    //     let mut app = create_app();
+
+    //     let requests = vec![
+    //         create_post_request(
+    //             "/singup",
+    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+    //         ),
+    //         create_delete_request(
+    //             "/delete_account",
+    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+    //         ),
+    //         create_delete_request(
+    //             "/delete_account",
+    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+    //         ),
+    //         create_delete_request(
+    //             "/delete_account",
+    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+    //         ),
+    //         create_delete_request(
+    //             "/delete_account",
+    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+    //         ),
+    //         create_post_request(
+    //             "/singup",
+    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+    //         ),
+    //     ];
+
+    //     let expected_exit_codes = vec![
+    //         StatusCode::CREATED,
+    //         StatusCode::FORBIDDEN,
+    //         StatusCode::OK,
+    //         StatusCode::NOT_FOUND,
+    //         StatusCode::NOT_FOUND,
+    //         StatusCode::CREATED,
+    //     ];
+
+    //     let expected_responses = vec![
+    //         "{\"username\":\"alex\"}",
+    //         "Username exists",
+    //         "Username exists",
+    //     ];
+    // }
 }
 
 //     let json_body: Json<SingupResponse> = Json::from_bytes(&body).unwrap();
