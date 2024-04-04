@@ -12,6 +12,14 @@ use sha2::{Digest, Sha256};
 use std::{collections::HashMap, sync::Arc, sync::RwLock};
 use std::{io::Read, str};
 
+pub fn add_two(a: i32) -> i32 {
+    internal_adder(a, 2)
+}
+
+fn internal_adder(a: i32, b: i32) -> i32 {
+    a + b
+}
+
 #[derive(Default)]
 struct AppState {
     users: HashMap<String, String>,

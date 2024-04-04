@@ -1,5 +1,5 @@
 [package]
-name = "music-hosting1"
+name = "music_hosting"
 version = "0.1.0"
 edition = "2021"
 
