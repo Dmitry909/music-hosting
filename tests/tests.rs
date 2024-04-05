@@ -7,8 +7,9 @@ use music_hosting;
 mod tests {
     use super::*;
     use axum::body::Body;
-    use axum::http::{self, Request};
+    use axum::http::{self, HeaderMap, Request};
     use axum::http::{request, StatusCode};
+    use axum::routing::head;
     use http_body_util::BodyExt;
     use mime;
     use tower::{Service, ServiceExt};
@@ -44,9 +45,11 @@ mod tests {
         requests: Vec<Request<Body>>,
         expected_exit_codes: Vec<StatusCode>,
         expected_bodies: Vec<&str>,
-    ) {
+    ) -> Vec<HeaderMap> {
         assert_eq!(requests.len(), expected_exit_codes.len());
         assert_eq!(requests.len(), expected_bodies.len());
+
+        let mut all_headers = vec![];
 
         let mut expected_exit_codes_iter = expected_exit_codes.into_iter();
         let mut expected_bodies_iter = expected_bodies.into_iter();
@@ -59,10 +62,15 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(response.status(), expected_exit_codes_iter.next().unwrap());
+
+            all_headers.push(response.headers().clone());
+
             let body = response.into_body().collect().await.unwrap().to_bytes();
             let body_string = str::from_utf8(&body).unwrap();
             assert_eq!(body_string, expected_bodies_iter.next().unwrap());
         }
+
+        all_headers
     }
 
     #[tokio::test]
@@ -222,6 +230,8 @@ mod tests {
             "{}",
         ];
 
-        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+        let headers = send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+
+        // TODO get token from headers and send logout requests with it
     }
 }
