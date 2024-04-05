@@ -43,13 +43,13 @@ mod tests {
         app: &mut Router,
         requests: Vec<Request<Body>>,
         expected_exit_codes: Vec<StatusCode>,
-        expected_responses: Vec<&str>,
+        expected_bodies: Vec<&str>,
     ) {
         assert_eq!(requests.len(), expected_exit_codes.len());
-        assert_eq!(requests.len(), expected_responses.len());
+        assert_eq!(requests.len(), expected_bodies.len());
 
         let mut expected_exit_codes_iter = expected_exit_codes.into_iter();
-        let mut expected_responses_iter = expected_responses.into_iter();
+        let mut expected_bodies_iter = expected_bodies.into_iter();
 
         for request in requests.into_iter() {
             let response = ServiceExt::<Request<Body>>::ready(app)
@@ -61,7 +61,7 @@ mod tests {
             assert_eq!(response.status(), expected_exit_codes_iter.next().unwrap());
             let body = response.into_body().collect().await.unwrap().to_bytes();
             let body_string = str::from_utf8(&body).unwrap();
-            assert_eq!(body_string, expected_responses_iter.next().unwrap());
+            assert_eq!(body_string, expected_bodies_iter.next().unwrap());
         }
     }
 
@@ -88,7 +88,7 @@ mod tests {
             StatusCode::BAD_REQUEST,
         ];
 
-        let expected_responses = vec![
+        let expected_bodies = vec![
             "Failed to parse the request body as JSON: EOF while parsing a value at line 1 column 0",
             "Failed to deserialize the JSON body into the target type: missing field `password` at line 1 column 32",
             "Failed to deserialize the JSON body into the target type: missing field `username` at line 1 column 27",
@@ -96,7 +96,7 @@ mod tests {
             "Failed to parse the request body as JSON: key must be a string at line 1 column 2",
         ];
 
-        send_batch_requests(&mut app, requests, expected_exit_codes, expected_responses).await;
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
     }
 
     #[tokio::test]
@@ -124,59 +124,104 @@ mod tests {
             StatusCode::CONFLICT,
         ];
 
-        let expected_responses = vec![
+        let expected_bodies = vec![
             "{\"username\":\"alex\"}",
             "Username exists",
             "Username exists",
         ];
 
-        send_batch_requests(&mut app, requests, expected_exit_codes, expected_responses).await;
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
     }
 
-    // #[tokio::test]
-    // async fn singup_and_delete() {
-    //     let mut app = music_hosting::create_app();
+    #[tokio::test]
+    async fn singup_and_delete() {
+        let mut app = music_hosting::create_app();
 
-    //     let requests = vec![
-    //         create_post_request(
-    //             "/singup",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_post_request(
-    //             "/singup",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //     ];
+        let requests = vec![
+            create_post_request(
+                "/singup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/singup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+        ];
 
-    //     let expected_exit_codes = vec![
-    //         StatusCode::CREATED,
-    //         StatusCode::FORBIDDEN,
-    //         StatusCode::OK,
-    //         StatusCode::NOT_FOUND,
-    //         StatusCode::NOT_FOUND,
-    //         StatusCode::CREATED,
-    //     ];
+        let expected_exit_codes = vec![
+            StatusCode::CREATED,
+            StatusCode::FORBIDDEN,
+            StatusCode::OK,
+            StatusCode::NOT_FOUND,
+            StatusCode::NOT_FOUND,
+            StatusCode::CREATED,
+        ];
 
-    //     let expected_responses = vec![
-    //         "{\"username\":\"alex\"}",
-    //         "Username exists",
-    //         "Username exists",
-    //     ];
-    // }
+        let expected_bodies = vec![
+            "{\"username\":\"alex\"}",
+            "Wrong password",
+            "{\"username\":\"alex\"}",
+            "Username doesn't exist",
+            "Username doesn't exist",
+            "{\"username\":\"alex\"}",
+        ];
+
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+    }
+
+    #[tokio::test]
+    async fn login() {
+        let mut app = music_hosting::create_app();
+
+        let requests = vec![
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/singup", 
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+            ),
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+        ];
+
+        let expected_exit_codes = vec![
+            StatusCode::NOT_FOUND,
+            StatusCode::CREATED,
+            StatusCode::FORBIDDEN,
+            StatusCode::OK,
+        ];
+
+        let expected_bodies = vec![
+            "Username doesn't exist",
+            "{\"username\":\"alex\"}",
+            "Wrong password",
+            "{}",
+        ];
+
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+    }
 }

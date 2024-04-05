@@ -7,6 +7,15 @@ Content-Type: application/json
     "password": "alex1990"
 }
 
+###
+POST http://0.0.0.0:3000/login
+Content-Type: application/json
+
+{
+    "username": "alex",
+    "password": "alex1990"
+}
+
 ### empty body
 POST http://0.0.0.0:3000/singup
 Content-Type: application/json
