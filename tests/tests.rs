@@ -203,7 +203,7 @@ mod tests {
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_post_request(
-                "/singup", 
+                "/singup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_post_request(
@@ -230,7 +230,8 @@ mod tests {
             "{}",
         ];
 
-        let headers = send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+        let headers =
+            send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
 
         // TODO get token from headers and send logout requests with it
     }
