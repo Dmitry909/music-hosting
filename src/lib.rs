@@ -35,7 +35,7 @@ type SharedState = Arc<RwLock<AppState>>;
 pub fn create_app() -> Router {
     let shared_state = SharedState::default();
     Router::new()
-        .route("/singup", post(singup))
+        .route("/signup", post(signup))
         .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
         .route("/logout", post(logout))
@@ -51,19 +51,19 @@ fn get_hash(password: &String) -> String {
 }
 
 #[derive(Deserialize)]
-struct SingupRequest {
+struct SignupRequest {
     username: String,
     password: String,
 }
 
 #[derive(Serialize, Deserialize)]
-struct SingupResponse {
+struct SignupResponse {
     username: String,
 }
 
-async fn singup(
+async fn signup(
     State(state): State<SharedState>,
-    Json(input_payload): Json<SingupRequest>,
+    Json(input_payload): Json<SignupRequest>,
 ) -> impl IntoResponse {
     let users = &mut state.write().unwrap().users;
     if users.contains_key(&input_payload.username) {
@@ -77,7 +77,7 @@ async fn singup(
         },
     );
 
-    let response = SingupResponse {
+    let response = SignupResponse {
         username: input_payload.username,
     };
 

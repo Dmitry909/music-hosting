@@ -92,18 +92,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn singup_bad_requests() {
+    async fn signup_bad_requests() {
         let mut app = music_hosting::create_app();
 
         let requests = vec![
-            create_post_request("/singup", Body::empty()),
+            create_post_request("/signup", Body::empty()),
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex_no_password\"}"),
             ),
-            create_post_request("/singup", Body::from("{\"password\": \"no_username\"}")),
-            create_post_request("/singup", Body::from("qwerty")),
-            create_post_request("/singup", Body::from("{abc}")),
+            create_post_request("/signup", Body::from("{\"password\": \"no_username\"}")),
+            create_post_request("/signup", Body::from("qwerty")),
+            create_post_request("/signup", Body::from("{abc}")),
         ];
 
         let expected_exit_codes = vec![
@@ -126,20 +126,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn singup_the_same_user() {
+    async fn signup_the_same_user() {
         let mut app = music_hosting::create_app();
 
         let requests = vec![
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
             ),
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
         ];
@@ -160,12 +160,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn singup_and_delete() {
+    async fn signup_and_delete() {
         let mut app = music_hosting::create_app();
 
         let requests = vec![
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_delete_request(
@@ -185,7 +185,7 @@ mod tests {
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
         ];
@@ -221,7 +221,7 @@ mod tests {
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_post_request(
-                "/singup",
+                "/signup",
                 Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
             ),
             create_post_request(
