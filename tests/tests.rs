@@ -5,12 +5,15 @@ use music_hosting;
 
 #[cfg(test)]
 mod tests {
+    use std::io::empty;
+
     use super::*;
     use axum::body::Body;
-    use axum::http::{self, HeaderMap, Request};
+    use axum::http::{self, header, HeaderMap, Request};
     use axum::http::{request, StatusCode};
     use axum::routing::head;
     use http_body_util::BodyExt;
+    use jsonwebtoken::Header;
     use mime;
     use tower::{Service, ServiceExt};
 
@@ -27,6 +30,21 @@ mod tests {
             .method("POST")
             .uri(uri)
             .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .body(body)
+            .unwrap()
+    }
+
+    fn create_post_request_with_header(
+        uri: &str,
+        body: Body,
+        header_name: &str,
+        header_value: &str,
+    ) -> Request<Body> {
+        Request::builder()
+            .method("POST")
+            .uri(uri)
+            .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .header(header_name, header_value)
             .body(body)
             .unwrap()
     }
@@ -194,7 +212,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn login() {
+    async fn login_and_logout() {
         let mut app = music_hosting::create_app();
 
         let requests = vec![
@@ -233,6 +251,38 @@ mod tests {
         let headers =
             send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
         let alex_token = headers[3]["authorization"].to_str().unwrap();
+
+        let requests = vec![
+            create_post_request("/logout", Body::empty()),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", "token :)"),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
+        ];
+
+        let expected_exit_codes = vec![
+            StatusCode::UNAUTHORIZED,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::NOT_FOUND,
+        ];
+
+        let expected_bodies = vec![
+            "Token is missing",
+            "Invalid token",
+            "",
+            "",
+            "{\"username\":\"alex\"}",
+            "Username doesn't exist",
+        ];
+
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
 
         // TODO send logout requests with token
     }
