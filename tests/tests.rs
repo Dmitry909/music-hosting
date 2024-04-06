@@ -227,12 +227,13 @@ mod tests {
             "Username doesn't exist",
             "{\"username\":\"alex\"}",
             "Wrong password",
-            "{}",
+            "",
         ];
 
         let headers =
             send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+        let alex_token = headers[3]["authorization"].to_str().unwrap();
 
-        // TODO get token from headers and send logout requests with it
+        // TODO send logout requests with token
     }
 }

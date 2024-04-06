@@ -1,7 +1,7 @@
 use axum::{
     body::Bytes,
     extract::State,
-    http::StatusCode,
+    http::{header, response, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{delete, get, post},
     Json, Router,
@@ -11,7 +11,13 @@ use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, io::Read, str, sync::Arc, sync::RwLock};
+use std::{
+    borrow::Borrow,
+    collections::HashMap,
+    io::Read,
+    str,
+    sync::{Arc, RwLock},
+};
 
 #[derive(Default)]
 struct UserData {
@@ -32,6 +38,7 @@ pub fn create_app() -> Router {
         .route("/singup", post(singup))
         .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
+        .route("/logout", post(logout))
         .with_state(shared_state)
 }
 
@@ -113,7 +120,7 @@ async fn delete_account(
 #[derive(Debug, Serialize, Deserialize)]
 struct TokenData {
     username: String,
-    expires: usize,
+    exp: usize,
 }
 
 #[derive(Deserialize)]
@@ -122,8 +129,15 @@ struct LoginRequest {
     password: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct LoginResponse {}
+fn generate_token(username: &String) -> String {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    let token_data = TokenData {
+        username: username.clone(),
+        exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
+    };
+    let encoding_key = EncodingKey::from_secret(secret);
+    encode(&Header::default(), &token_data, &encoding_key).unwrap()
+}
 
 async fn login(
     State(state): State<SharedState>,
@@ -139,24 +153,44 @@ async fn login(
         return (StatusCode::FORBIDDEN, "Wrong password").into_response();
     }
 
-    let secret = b"my_secret_key_d47fjs&w3)wj";
-    let encoding_header = Header::new(Algorithm::HS256);
-
-    let expires = Local::now() + Duration::hours(24);
-    let token_data = TokenData {
-        username: input_payload.username.clone(), // TODO do not clone here
-        expires: expires.timestamp() as usize,
-    };
-    let token = encode(
-        &encoding_header,
-        &token_data,
-        &EncodingKey::from_secret(secret),
-    )
-    .expect("Failed to encode token");
+    let token = generate_token(&input_payload.username);
 
     users.get_mut(&input_payload.username).unwrap().active_token = token.clone();
 
-    let response = LoginResponse {};
+    (StatusCode::OK, [("Authorization", token)]).into_response()
+}
 
-    (StatusCode::OK, [("Authorization", token)], Json(response)).into_response()
+fn decode_token(
+    token: &str,
+) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    return decode::<TokenData>(
+        token,
+        &DecodingKey::from_secret(secret),
+        &Validation::new(Algorithm::HS256),
+    );
+}
+
+async fn logout(State(state): State<SharedState>, headers: HeaderMap) -> impl IntoResponse {
+    if !headers.contains_key("Authorization") {
+        return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+    }
+    let token = headers["Authorization"].to_str().unwrap();
+
+    let decoded_token = match decode_token(token) {
+        Ok(c) => c.claims,
+        Err(err) => {
+            println!("Error: {:?}", err);
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    let users = &mut state.write().unwrap().users;
+    if !users.contains_key(&decoded_token.username) {
+        return (StatusCode::NOT_FOUND, "Username doesn't exist").into_response();
+    }
+
+    users.get_mut(&decoded_token.username).unwrap().active_token = String::new();
+
+    (StatusCode::OK).into_response()
 }
