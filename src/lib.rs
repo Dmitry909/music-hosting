@@ -14,8 +14,14 @@ use sha2::{Digest, Sha256};
 use std::{collections::HashMap, io::Read, str, sync::Arc, sync::RwLock};
 
 #[derive(Default)]
+struct UserData {
+    password_hash: String,
+    active_token: String,
+}
+
+#[derive(Default)]
 struct AppState {
-    users: HashMap<String, String>,
+    users: HashMap<String, UserData>,
 }
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -58,7 +64,10 @@ async fn singup(
     }
     users.insert(
         input_payload.username.clone(),
-        get_hash(&input_payload.password),
+        UserData {
+            password_hash: get_hash(&input_payload.password),
+            active_token: String::new(),
+        },
     );
 
     let response = SingupResponse {
@@ -89,7 +98,7 @@ async fn delete_account(
     }
 
     let password_hash = get_hash(&input_payload.password);
-    if users[&input_payload.username] != password_hash {
+    if users[&input_payload.username].password_hash != password_hash {
         return (StatusCode::FORBIDDEN, "Wrong password").into_response();
     }
 
@@ -126,16 +135,16 @@ async fn login(
     }
 
     let password_hash = get_hash(&input_payload.password);
-    if users[&input_payload.username] != password_hash {
+    if users[&input_payload.username].password_hash != password_hash {
         return (StatusCode::FORBIDDEN, "Wrong password").into_response();
     }
 
     let secret = b"my_secret_key_d47fjs&w3)wj";
     let encoding_header = Header::new(Algorithm::HS256);
-    
+
     let expires = Local::now() + Duration::hours(24);
     let token_data = TokenData {
-        username: input_payload.username,
+        username: input_payload.username.clone(), // TODO do not clone here
         expires: expires.timestamp() as usize,
     };
     let token = encode(
@@ -145,7 +154,7 @@ async fn login(
     )
     .expect("Failed to encode token");
 
-    // TODO invalidate previous token(s)
+    users.get_mut(&input_payload.username).unwrap().active_token = token.clone();
 
     let response = LoginResponse {};
 
