@@ -30,11 +30,10 @@ use sqlx::{database, postgres::PgPoolOptions, Pool, Postgres};
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
     match PgPoolOptions::new().connect(&database_url).await {
         Ok(pool) => {
-            println!("✅Connection to the database is successful!");
             return pool;
         }
         Err(err) => {
-            println!("🔥 Failed to connect to the database: {:?}", err);
+            println!("Failed to connect to the database: {:?}", err);
             std::process::exit(1);
         }
     };
@@ -58,7 +57,7 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
     let shared_state = Arc::new(AppState { pool });
     Router::new()
         .route("/signup", post(signup))
-        // .route("/delete_account", delete(delete_account))
+        .route("/delete_account", delete(delete_account))
         // .route("/login", post(login))
         // .route("/logout", post(logout))
         .with_state(shared_state)
@@ -96,7 +95,8 @@ async fn signup(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let query_result = sqlx::query_as!(
         UsersModel,
-        "INSERT INTO users (username,password_hash,active_token) VALUES ($1, $2, $3) RETURNING *",
+        "INSERT INTO users (username,password_hash,active_token) VALUES ($1, $2, $3) RETURNING *", // TODO не возвращать всё, зачем, лучше ничего не возвращать, ошибку если что но и так вернет
+        // TODO и не нужно указывать схему после users
         input_payload.username,
         get_hash(&input_payload.password),
         String::new(),
@@ -116,52 +116,62 @@ async fn signup(
             return Err((StatusCode::CONFLICT, "Username exists").into_response());
         }
     };
-
-    // let users = &mut state.write().unwrap().users;
-    // if users.contains_key(&input_payload.username) {
-    //     return (StatusCode::CONFLICT, "Username exists").into_response();
-    // }
-    // users.insert(
-    //     input_payload.username.clone(),
-    //     UserData {
-    //         password_hash: get_hash(&input_payload.password),
-    //         active_token: String::new(),
-    //     },
-    // );
 }
 
-// #[derive(Deserialize)]
-// struct DeleteAccountRequest {
-//     username: String,
-//     password: String,
-// }
+#[derive(Deserialize)]
+struct DeleteAccountRequest {
+    username: String,
+    password: String,
+}
 
-// #[derive(Serialize, Deserialize)]
-// struct DeleteAccountResponse {
-//     username: String,
-// }
+#[derive(Serialize, Deserialize)]
+struct DeleteAccountResponse {
+    username: String,
+}
 
-// async fn delete_account(
-//     State(state): State<SharedState>,
-//     Json(input_payload): Json<DeleteAccountRequest>,
-// ) -> impl IntoResponse {
-//     let users = &mut state.write().unwrap().users;
-//     if !users.contains_key(&input_payload.username) {
-//         return (StatusCode::NOT_FOUND, "Username doesn't exist").into_response();
-//     }
+async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<DeleteAccountRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let query_result = sqlx::query_as!(
+        UsersModel,
+        "DELETE FROM users WHERE username=$1 AND password_hash=$2 RETURNING *",
+        input_payload.username,
+        get_hash(&input_payload.password),
+    )
+    .fetch_optional(&state.pool)
+    .await;
 
-//     let password_hash = get_hash(&input_payload.password);
-//     if users[&input_payload.username].password_hash != password_hash {
-//         return (StatusCode::FORBIDDEN, "Wrong password").into_response();
-//     }
+    match query_result {
+        Ok(user_optional) => match user_optional {
+            Some(_) => {
+                let response = DeleteAccountResponse {
+                    username: input_payload.username,
+                };
 
-//     users.remove(&input_payload.username);
-//     let response = DeleteAccountResponse {
-//         username: input_payload.username,
-//     };
+                return Ok((StatusCode::OK, Json(response)).into_response());
+            }
+            None => return Ok((StatusCode::NOT_FOUND, "Username doesn't exist or password is wrong").into_response()),
+        },
+        Err(_) => {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
+        }
+    };
 
-//     (StatusCode::OK, Json(response)).into_response()
-// }
+    // if !users.contains_key(&input_payload.username) {
+    //     return (StatusCode::NOT_FOUND, "Username doesn't exist").into_response();
+    // }
+
+    // let password_hash = get_hash(&input_payload.password);
+    // if users[&input_payload.username].password_hash != password_hash {
+    //     return (StatusCode::FORBIDDEN, "Wrong password").into_response();
+    // }
+
+    // users.remove(&input_payload.username);
+    // let response = DeleteAccountResponse {
+    //     username: input_payload.username,
+    // };
+}
 
 // #[derive(Debug, Serialize, Deserialize)]
 // struct TokenData {

@@ -1,5 +1,6 @@
 use axum::Router;
 use std::str;
+use serial_test::serial;
 
 use music_hosting;
 
@@ -97,6 +98,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn signup_bad_requests() {
         let mut app = create_testing_app().await;
 
@@ -131,6 +133,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn signup_the_same_user() {
         let mut app = create_testing_app().await;
 
@@ -164,57 +167,58 @@ mod tests {
         send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
     }
 
-    // #[tokio::test]
-    // async fn signup_and_delete() {
-    //     let mut app = music_hosting::create_app();
+    #[tokio::test]
+    #[serial]
+    async fn signup_and_delete() {
+        let mut app = create_testing_app().await;
 
-    //     let requests = vec![
-    //         create_post_request(
-    //             "/signup",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
-    //         ),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_post_request(
-    //             "/signup",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //     ];
+        let requests = vec![
+            create_post_request(
+                "/signup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+            ),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/signup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+        ];
 
-    //     let expected_exit_codes = vec![
-    //         StatusCode::CREATED,
-    //         StatusCode::FORBIDDEN,
-    //         StatusCode::OK,
-    //         StatusCode::NOT_FOUND,
-    //         StatusCode::NOT_FOUND,
-    //         StatusCode::CREATED,
-    //     ];
+        let expected_exit_codes = vec![
+            StatusCode::CREATED,
+            StatusCode::NOT_FOUND,
+            StatusCode::OK,
+            StatusCode::NOT_FOUND,
+            StatusCode::NOT_FOUND,
+            StatusCode::CREATED,
+        ];
 
-    //     let expected_bodies = vec![
-    //         "{\"username\":\"alex\"}",
-    //         "Wrong password",
-    //         "{\"username\":\"alex\"}",
-    //         "Username doesn't exist",
-    //         "Username doesn't exist",
-    //         "{\"username\":\"alex\"}",
-    //     ];
+        let expected_bodies = vec![
+            "{\"username\":\"alex\"}",
+            "Username doesn't exist or password is wrong",
+            "{\"username\":\"alex\"}",
+            "Username doesn't exist or password is wrong",
+            "Username doesn't exist or password is wrong",
+            "{\"username\":\"alex\"}",
+        ];
 
-    //     send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
-    // }
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+    }
 
     // #[tokio::test]
     // async fn login_and_logout() {
