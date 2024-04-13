@@ -44,8 +44,16 @@ struct AppState {
     pool: Pool<Postgres>,
 }
 
-pub async fn create_app(database_url: &str) -> Router {
-    let pool = create_pool(database_url).await;
+pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
+    let pool = create_pool(users_db_url).await;
+
+    if need_to_clear {
+        let _ = sqlx::query_as!(UsersModel, "TRUNCATE TABLE users",)
+            .execute(&pool)
+            .await;
+    }
+
+    // sqlx::migrate!("./migrations").run(&pool);
 
     let shared_state = Arc::new(AppState { pool });
     Router::new()
