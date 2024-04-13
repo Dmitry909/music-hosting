@@ -1,6 +1,6 @@
 use axum::Router;
-use std::str;
 use serial_test::serial;
+use std::str;
 
 use music_hosting;
 
@@ -62,7 +62,7 @@ mod tests {
     async fn create_testing_app() -> Router {
         let users_db_url = "postgresql://postgres:qwerty@localhost:5432/music_hosting";
         music_hosting::create_app(users_db_url, true).await
-    } 
+    }
 
     async fn send_batch_requests(
         app: &mut Router,
@@ -220,79 +220,78 @@ mod tests {
         send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
     }
 
-    // #[tokio::test]
-    // async fn login_and_logout() {
-    //     let mut app = music_hosting::create_app();
+    #[tokio::test]
+    #[serial]
+    async fn login_and_logout() {
+        let mut app = create_testing_app().await;
 
-    //     let requests = vec![
-    //         create_post_request(
-    //             "/login",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_post_request(
-    //             "/signup",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_post_request(
-    //             "/login",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
-    //         ),
-    //         create_post_request(
-    //             "/login",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //     ];
+        let requests = vec![
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/signup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1991\"}"),
+            ),
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+        ];
 
-    //     let expected_exit_codes = vec![
-    //         StatusCode::NOT_FOUND,
-    //         StatusCode::CREATED,
-    //         StatusCode::FORBIDDEN,
-    //         StatusCode::OK,
-    //     ];
+        let expected_exit_codes = vec![
+            StatusCode::NOT_FOUND,
+            StatusCode::CREATED,
+            StatusCode::NOT_FOUND,
+            StatusCode::OK,
+        ];
 
-    //     let expected_bodies = vec![
-    //         "Username doesn't exist",
-    //         "{\"username\":\"alex\"}",
-    //         "Wrong password",
-    //         "",
-    //     ];
+        let expected_bodies = vec![
+            "Username doesn't exist or password is wrong",
+            "{\"username\":\"alex\"}",
+            "Username doesn't exist or password is wrong",
+            "",
+        ];
 
-    //     let headers =
-    //         send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
-    //     let alex_token = headers[3]["authorization"].to_str().unwrap();
+        let headers =
+            send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+        let alex_token = headers[3]["authorization"].to_str().unwrap();
 
-    //     let requests = vec![
-    //         create_post_request("/logout", Body::empty()),
-    //         create_post_request_with_header("/logout", Body::empty(), "Authorization", "token :)"),
-    //         create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
-    //         create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
-    //         create_delete_request(
-    //             "/delete_account",
-    //             Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
-    //         ),
-    //         create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
-    //     ];
+        let requests = vec![
+            create_post_request("/logout", Body::empty()),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", "token :)"),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
+            create_delete_request(
+                "/delete_account",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request_with_header("/logout", Body::empty(), "Authorization", alex_token),
+        ];
 
-    //     let expected_exit_codes = vec![
-    //         StatusCode::UNAUTHORIZED,
-    //         StatusCode::UNAUTHORIZED,
-    //         StatusCode::OK,
-    //         StatusCode::OK,
-    //         StatusCode::OK,
-    //         StatusCode::NOT_FOUND,
-    //     ];
+        let expected_exit_codes = vec![
+            StatusCode::UNAUTHORIZED,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::NOT_FOUND,
+        ];
 
-    //     let expected_bodies = vec![
-    //         "Token is missing",
-    //         "Invalid token",
-    //         "",
-    //         "",
-    //         "{\"username\":\"alex\"}",
-    //         "Username doesn't exist",
-    //     ];
+        let expected_bodies = vec![
+            "Token is missing",
+            "Invalid token",
+            "",
+            "",
+            "{\"username\":\"alex\"}",
+            "Username doesn't exist",
+        ];
 
-    //     send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
-
-    //     // TODO send logout requests with token
-    // }
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+    }
 }

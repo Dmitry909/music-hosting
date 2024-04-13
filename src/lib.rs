@@ -58,8 +58,8 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
     Router::new()
         .route("/signup", post(signup))
         .route("/delete_account", delete(delete_account))
-        // .route("/login", post(login))
-        // .route("/logout", post(logout))
+        .route("/login", post(login))
+        .route("/logout", post(logout))
         .with_state(shared_state)
 }
 
@@ -151,102 +151,117 @@ async fn delete_account(
 
                 return Ok((StatusCode::OK, Json(response)).into_response());
             }
-            None => return Ok((StatusCode::NOT_FOUND, "Username doesn't exist or password is wrong").into_response()),
+            None => {
+                return Ok((
+                    StatusCode::NOT_FOUND,
+                    "Username doesn't exist or password is wrong",
+                )
+                    .into_response())
+            }
         },
         Err(_) => {
             return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
         }
     };
-
-    // if !users.contains_key(&input_payload.username) {
-    //     return (StatusCode::NOT_FOUND, "Username doesn't exist").into_response();
-    // }
-
-    // let password_hash = get_hash(&input_payload.password);
-    // if users[&input_payload.username].password_hash != password_hash {
-    //     return (StatusCode::FORBIDDEN, "Wrong password").into_response();
-    // }
-
-    // users.remove(&input_payload.username);
-    // let response = DeleteAccountResponse {
-    //     username: input_payload.username,
-    // };
 }
 
-// #[derive(Debug, Serialize, Deserialize)]
-// struct TokenData {
-//     username: String,
-//     exp: usize,
-// }
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenData {
+    username: String,
+    exp: usize,
+}
 
-// #[derive(Deserialize)]
-// struct LoginRequest {
-//     username: String,
-//     password: String,
-// }
+#[derive(Deserialize)]
+struct LoginRequest {
+    username: String,
+    password: String,
+}
 
-// fn generate_token(username: &String) -> String {
-//     let secret = b"my_secret_key_d47fjs&w3)wj";
-//     let token_data = TokenData {
-//         username: username.clone(),
-//         exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
-//     };
-//     let encoding_key = EncodingKey::from_secret(secret);
-//     encode(&Header::default(), &token_data, &encoding_key).unwrap()
-// }
+fn generate_token(username: &String) -> String {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    let token_data = TokenData {
+        username: username.clone(),
+        exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
+    };
+    let encoding_key = EncodingKey::from_secret(secret);
+    encode(&Header::default(), &token_data, &encoding_key).unwrap()
+}
 
-// async fn login(
-//     State(state): State<SharedState>,
-//     Json(input_payload): Json<LoginRequest>,
-// ) -> impl IntoResponse {
-//     let users = &mut state.write().unwrap().users;
-//     if !users.contains_key(&input_payload.username) {
-//         return (StatusCode::NOT_FOUND, "Username doesn't exist").into_response();
-//     }
+async fn login(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<LoginRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let token = generate_token(&input_payload.username);
 
-//     let password_hash = get_hash(&input_payload.password);
-//     if users[&input_payload.username].password_hash != password_hash {
-//         return (StatusCode::FORBIDDEN, "Wrong password").into_response();
-//     }
+    let query_result = sqlx::query_as!(
+        UsersModel,
+        "UPDATE users SET active_token=$3 WHERE username=$1 AND password_hash=$2 RETURNING *",
+        input_payload.username,
+        get_hash(&input_payload.password),
+        &token,
+    )
+    .fetch_optional(&state.pool)
+    .await;
 
-//     let token = generate_token(&input_payload.username);
+    match query_result {
+        Ok(user_optional) => match user_optional {
+            Some(_) => {
+                return Ok((StatusCode::OK, [("Authorization", token)]).into_response());
+            }
+            None => {
+                return Ok((
+                    StatusCode::NOT_FOUND,
+                    "Username doesn't exist or password is wrong",
+                )
+                    .into_response())
+            }
+        },
+        Err(_) => {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
+        }
+    };
+}
 
-//     users.get_mut(&input_payload.username).unwrap().active_token = token.clone();
+fn decode_token(
+    token: &str,
+) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    return decode::<TokenData>(
+        token,
+        &DecodingKey::from_secret(secret),
+        &Validation::new(Algorithm::HS256),
+    );
+}
 
-//     (StatusCode::OK, [("Authorization", token)]).into_response()
-// }
+async fn logout(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    if !headers.contains_key("Authorization") {
+        return Ok((StatusCode::UNAUTHORIZED, "Token is missing").into_response());
+    }
+    let token = headers["Authorization"].to_str().unwrap();
 
-// fn decode_token(
-//     token: &str,
-// ) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
-//     let secret = b"my_secret_key_d47fjs&w3)wj";
-//     return decode::<TokenData>(
-//         token,
-//         &DecodingKey::from_secret(secret),
-//         &Validation::new(Algorithm::HS256),
-//     );
-// }
+    let decoded_token = match decode_token(token) {
+        Ok(c) => c.claims,
+        Err(_) => {
+            return Ok((StatusCode::UNAUTHORIZED, "Invalid token").into_response());
+        }
+    };
 
-// async fn logout(State(state): State<SharedState>, headers: HeaderMap) -> impl IntoResponse {
-//     if !headers.contains_key("Authorization") {
-//         return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
-//     }
-//     let token = headers["Authorization"].to_str().unwrap();
+    let query_result = sqlx::query_as!(
+        UsersModel,
+        "UPDATE users SET active_token='' WHERE username=$1 RETURNING *",
+        &decoded_token.username,
+    )
+    .fetch_optional(&state.pool)
+    .await;
 
-//     let decoded_token = match decode_token(token) {
-//         Ok(c) => c.claims,
-//         Err(err) => {
-//             println!("Error: {:?}", err);
-//             return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
-//         }
-//     };
-
-//     let users = &mut state.write().unwrap().users;
-//     if !users.contains_key(&decoded_token.username) {
-//         return (StatusCode::NOT_FOUND, "Username doesn't exist").into_response();
-//     }
-
-//     users.get_mut(&decoded_token.username).unwrap().active_token = String::new();
-
-//     (StatusCode::OK).into_response()
-// }
+    match query_result {
+        Ok(user_optional) => match user_optional {
+            Some(_) => Ok((StatusCode::OK).into_response()),
+            None => Ok((StatusCode::NOT_FOUND, "Username doesn't exist").into_response()),
+        },
+        Err(_) => Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response()),
+    }
+}
