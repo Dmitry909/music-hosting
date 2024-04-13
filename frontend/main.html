@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#signupForm').on('submit', function(e) {
+                e.preventDefault();
+                var username = $('#username').val();
+                var password = $('#password').val();
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://0.0.0.0:3000/signup',
+                    data: {
+                        username: username,
+                        password: password
+                    },
+                    success: function(response) {
+                        $('body').empty().append(response);
+                    },
+                    error: function() {
+                        alert('Error occurred during sign up.');
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Sign Up</h1>
+    <form id="signupForm">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+        <button type="submit">Sign Up</button>
+    </form>
+</body>
+</html>
