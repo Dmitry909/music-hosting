@@ -25,13 +25,28 @@ struct UserData {
     active_token: String,
 }
 
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::{database, postgres::PgPoolOptions, Pool, Postgres};
+
+pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
+    match PgPoolOptions::new().connect(&database_url).await {
+        Ok(pool) => {
+            println!("✅Connection to the database is successful!");
+            return pool;
+        }
+        Err(err) => {
+            println!("🔥 Failed to connect to the database: {:?}", err);
+            std::process::exit(1);
+        }
+    };
+}
 
 struct AppState {
     pool: Pool<Postgres>,
 }
 
-pub fn create_app(pool: Pool<Postgres>) -> Router {
+pub async fn create_app(database_url: &str) -> Router {
+    let pool = create_pool(database_url).await;
+
     let shared_state = Arc::new(AppState { pool });
     Router::new()
         .route("/signup", post(signup))
@@ -70,16 +85,29 @@ pub struct UsersModel {
 async fn signup(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<SignupRequest>,
-) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+) -> Result<impl IntoResponse, impl IntoResponse> {
     let query_result = sqlx::query_as!(
         UsersModel,
         "INSERT INTO users (username,password_hash,active_token) VALUES ($1, $2, $3) RETURNING *",
-        input_payload.username.to_string(),
-        "qwe",
-        "rty",
+        input_payload.username,
+        get_hash(&input_payload.password),
+        String::new(),
     )
     .fetch_all(&state.pool)
     .await;
+
+    match query_result {
+        Ok(_) => {
+            let response = SignupResponse {
+                username: input_payload.username,
+            };
+
+            return Ok((StatusCode::CREATED, Json(response)).into_response());
+        }
+        Err(_) => {
+            return Err((StatusCode::CONFLICT, "Username exists").into_response());
+        }
+    };
 
     // let users = &mut state.write().unwrap().users;
     // if users.contains_key(&input_payload.username) {
@@ -92,12 +120,6 @@ async fn signup(
     //         active_token: String::new(),
     //     },
     // );
-
-    let response = SignupResponse {
-        username: input_payload.username,
-    };
-
-    Ok((StatusCode::CREATED, Json(response)).into_response())
 }
 
 // #[derive(Deserialize)]
