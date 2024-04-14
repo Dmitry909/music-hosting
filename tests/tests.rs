@@ -1,4 +1,7 @@
 use axum::Router;
+use chrono::{Duration, Local};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
 use serial_test::serial;
 use std::str;
 
@@ -22,6 +25,19 @@ mod tests {
         Request::builder()
             .method("GET")
             .uri(uri)
+            .body(Body::empty())
+            .unwrap()
+    }
+
+    fn create_get_request_with_header(
+        uri: &str,
+        header_name: &str,
+        header_value: &str,
+    ) -> Request<Body> {
+        Request::builder()
+            .method("GET")
+            .uri(uri)
+            .header(header_name, header_value)
             .body(Body::empty())
             .unwrap()
     }
@@ -85,13 +101,20 @@ mod tests {
                 .call(request)
                 .await
                 .unwrap();
-            assert_eq!(response.status(), expected_exit_codes_iter.next().unwrap());
 
             all_headers.push(response.headers().clone());
 
+            let status = response.status();
             let body = response.into_body().collect().await.unwrap().to_bytes();
             let body_string = str::from_utf8(&body).unwrap();
-            assert_eq!(body_string, expected_bodies_iter.next().unwrap());
+
+            assert_eq!(
+                (status, body_string),
+                (
+                    expected_exit_codes_iter.next().unwrap(),
+                    expected_bodies_iter.next().unwrap()
+                )
+            );
         }
 
         all_headers
@@ -290,6 +313,81 @@ mod tests {
             "",
             "{\"username\":\"alex\"}",
             "Username doesn't exist",
+        ];
+
+        send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct TokenData {
+        username: String,
+        exp: usize,
+    }
+
+    fn generate_token(username: &str, exp: usize) -> String {
+        let secret = b"my_secret_key_d47fjs&w3)wj";
+        let token_data = TokenData {
+            username: username.to_string(),
+            exp,
+        };
+        let encoding_key = EncodingKey::from_secret(secret);
+        encode(&Header::default(), &token_data, &encoding_key).unwrap()
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn login_and_check_token() {
+        let mut app = create_testing_app().await;
+
+        let requests = vec![
+            create_post_request(
+                "/signup",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+            create_post_request(
+                "/login",
+                Body::from("{\"username\": \"alex\",\"password\": \"alex1990\"}"),
+            ),
+        ];
+
+        let expected_exit_codes = vec![StatusCode::CREATED, StatusCode::OK];
+
+        let expected_bodies = vec!["{\"username\":\"alex\"}", ""];
+
+        let headers =
+            send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;
+        let alex_token = headers[1]["authorization"].to_str().unwrap();
+        let alex_old_token = generate_token(
+            "alex",
+            (Local::now() - Duration::minutes(1)).timestamp() as usize,
+        );
+        let alex_ok_token = generate_token(
+            "alex",
+            (Local::now() + Duration::hours(23)).timestamp() as usize,
+        );
+
+        let requests = vec![
+            create_get_request_with_header("/check_token", "Authorization", alex_token),
+            create_get_request_with_header("/check_token", "Authorization", &alex_old_token),
+            create_get_request("/check_token"),
+            create_get_request_with_header("/check_token", "Authorization", "invalid token"),
+            create_get_request_with_header("/check_token", "Authorization", &alex_ok_token),
+        ];
+
+        let expected_exit_codes = vec![
+            StatusCode::OK,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::UNAUTHORIZED,
+            StatusCode::OK,
+        ];
+
+        let expected_bodies = vec![
+            "{\"username\":\"alex\"}",
+            "Token expired",
+            "Token is missing",
+            "Invalid token",
+            "{\"username\":\"alex\"}",
         ];
 
         send_batch_requests(&mut app, requests, expected_exit_codes, expected_bodies).await;

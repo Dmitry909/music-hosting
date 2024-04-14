@@ -9,7 +9,7 @@ use axum::{
 use chrono::{Duration, Local};
 use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use serde::{forward_to_deserialize_any, Deserialize, Serialize};
+use serde::{de, forward_to_deserialize_any, Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
     borrow::Borrow,
@@ -54,6 +54,7 @@ pub async fn create_app(users_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
         .route("/logout", post(logout))
+        .route("/check_token", get(check_token))
         .with_state(shared_state)
 }
 
@@ -94,16 +95,21 @@ struct DeleteAccountResponse {
     username: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct TokenData {
+#[derive(Serialize, Deserialize)]
+struct CheckTokenResponse {
     username: String,
-    exp: usize,
 }
 
 #[derive(Deserialize)]
 struct LoginRequest {
     username: String,
     password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenData {
+    username: String,
+    exp: usize,
 }
 
 fn generate_token(username: &String) -> String {
@@ -125,6 +131,10 @@ fn decode_token(
         &DecodingKey::from_secret(secret),
         &Validation::new(Algorithm::HS256),
     );
+}
+
+fn exp_expired(exp: usize) -> bool {
+    exp < (Local::now().timestamp() as usize)
 }
 
 async fn signup(
@@ -257,4 +267,27 @@ async fn logout(
         },
         Err(_) => Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response()),
     }
+}
+
+async fn check_token(headers: HeaderMap) -> impl IntoResponse {
+    if !headers.contains_key("Authorization") {
+        return (StatusCode::UNAUTHORIZED, "Token is missing").into_response();
+    }
+    let token = headers["Authorization"].to_str().unwrap();
+
+    let decoded_token = match decode_token(token) {
+        Ok(c) => c.claims,
+        Err(_) => {
+            return (StatusCode::UNAUTHORIZED, "Invalid token").into_response();
+        }
+    };
+
+    if exp_expired(decoded_token.exp) {
+        return (StatusCode::UNAUTHORIZED, "Token expired").into_response();
+    }
+
+    let response = CheckTokenResponse {
+        username: decoded_token.username,
+    };
+    (StatusCode::OK, Json(response)).into_response()
 }
