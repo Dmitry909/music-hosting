@@ -71,6 +71,13 @@ fn get_hash(password: &String) -> String {
     hex::encode(result)
 }
 
+#[derive(Debug)]
+pub struct UsersModel {
+    pub username: String,
+    pub password_hash: String,
+    pub active_token: String,
+}
+
 #[derive(Deserialize)]
 struct SignupRequest {
     username: String,
@@ -82,11 +89,38 @@ struct SignupResponse {
     username: String,
 }
 
-#[derive(Debug)]
-pub struct UsersModel {
-    pub username: String,
-    pub password_hash: String,
-    pub active_token: String,
+#[derive(Deserialize)]
+struct DeleteAccountRequest {
+    username: String,
+    password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct DeleteAccountResponse {
+    username: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenData {
+    username: String,
+    exp: usize,
+}
+
+#[derive(Deserialize)]
+struct LoginRequest {
+    username: String,
+    password: String,
+}
+
+fn decode_token(
+    token: &str,
+) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    return decode::<TokenData>(
+        token,
+        &DecodingKey::from_secret(secret),
+        &Validation::new(Algorithm::HS256),
+    );
 }
 
 async fn signup(
@@ -95,13 +129,12 @@ async fn signup(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let query_result = sqlx::query_as!(
         UsersModel,
-        "INSERT INTO users (username,password_hash,active_token) VALUES ($1, $2, $3) RETURNING *", // TODO не возвращать всё, зачем, лучше ничего не возвращать, ошибку если что но и так вернет
-        // TODO и не нужно указывать схему после users
+        "INSERT INTO users VALUES ($1, $2, $3)",
         input_payload.username,
         get_hash(&input_payload.password),
         String::new(),
     )
-    .fetch_all(&state.pool)
+    .execute(&state.pool)
     .await;
 
     match query_result {
@@ -116,17 +149,6 @@ async fn signup(
             return Err((StatusCode::CONFLICT, "Username exists").into_response());
         }
     };
-}
-
-#[derive(Deserialize)]
-struct DeleteAccountRequest {
-    username: String,
-    password: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct DeleteAccountResponse {
-    username: String,
 }
 
 async fn delete_account(
@@ -163,18 +185,6 @@ async fn delete_account(
             return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
         }
     };
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct TokenData {
-    username: String,
-    exp: usize,
-}
-
-#[derive(Deserialize)]
-struct LoginRequest {
-    username: String,
-    password: String,
 }
 
 fn generate_token(username: &String) -> String {
@@ -220,17 +230,6 @@ async fn login(
             return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
         }
     };
-}
-
-fn decode_token(
-    token: &str,
-) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
-    let secret = b"my_secret_key_d47fjs&w3)wj";
-    return decode::<TokenData>(
-        token,
-        &DecodingKey::from_secret(secret),
-        &Validation::new(Algorithm::HS256),
-    );
 }
 
 async fn logout(
