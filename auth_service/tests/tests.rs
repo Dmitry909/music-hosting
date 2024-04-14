@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serial_test::serial;
 use std::str;
 
-use music_hosting;
+use auth_service;
 
 #[cfg(test)]
 mod tests {
@@ -76,8 +76,8 @@ mod tests {
     }
 
     async fn create_testing_app() -> Router {
-        let users_db_url = "postgresql://postgres:qwerty@localhost:5432/music_hosting";
-        music_hosting::create_app(users_db_url, true).await
+        let users_db_url = "postgresql://postgres:qwerty@localhost:5432/auth_service";
+        auth_service::create_app(users_db_url, true).await
     }
 
     async fn send_batch_requests(
