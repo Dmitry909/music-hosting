@@ -1,7 +1,5 @@
 use music_hosting;
 
-use sqlx::{pool, postgres::PgPoolOptions, Pool, Postgres};
-
 #[tokio::main]
 async fn main() {
     let users_db_url = "postgresql://postgres:qwerty@localhost:5432/music_hosting";
