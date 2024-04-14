@@ -11,6 +11,7 @@ use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{de, forward_to_deserialize_any, Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fs;
 use std::{
     borrow::Borrow,
     collections::HashMap,
@@ -39,9 +40,12 @@ struct AppState {
 
 #[derive(Debug)]
 pub struct TracksModel {
-    pub username: String,
-    pub password_hash: String,
-    pub active_token: String,
+    pub id: i32,
+    pub author_username: String,
+    pub name: String,
+    pub filename: String,
+    pub cnt_rates: i64,
+    pub sum_rates: i64,
 }
 
 pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
@@ -57,7 +61,7 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
 
     let shared_state = Arc::new(AppState { tracks_pool });
     Router::new()
-        // .route("/delete_account", delete(delete_account))
+        .route("/delete_account", delete(delete_account))
         // .route("/upload_track", post(upload_track))
         // .route("/delete_track", delete(delete_track))
         // .route("/download_track", get(download_track))
@@ -73,41 +77,31 @@ struct DeleteAccountRequest {
     username: String,
 }
 
-// async fn delete_account(
-//     State(state): State<Arc<AppState>>,
-//     Json(input_payload): Json<DeleteAccountRequest>,
-// ) -> Result<impl IntoResponse, impl IntoResponse> {
-//     let query_result = sqlx::query_as!(
-//         TracksModel,
-//         "DELETE FROM tracks WHERE username=$1 AND password_hash=$2 RETURNING *",
-//         input_payload.username,
-//         get_hash(&input_payload.password),
-//     )
-//     .fetch_optional(&state.pool)
-//     .await;
+async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<DeleteAccountRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let query_result = sqlx::query_as!(
+        TracksModel,
+        "DELETE FROM tracks WHERE author_username=$1 RETURNING *",
+        input_payload.username,
+    )
+    .fetch_all(&state.tracks_pool)
+    .await;
 
-//     match query_result {
-//         Ok(user_optional) => match user_optional {
-//             Some(_) => {
-//                 let response = DeleteAccountResponse {
-//                     username: input_payload.username,
-//                 };
-
-//                 return Ok((StatusCode::OK, Json(response)).into_response());
-//             }
-//             None => {
-//                 return Ok((
-//                     StatusCode::NOT_FOUND,
-//                     "Username doesn't exist or password is wrong",
-//                 )
-//                     .into_response())
-//             }
-//         },
-//         Err(_) => {
-//             return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
-//         }
-//     };
-// }
+    match query_result {
+        Ok(tracks_vec) => {
+            for track in tracks_vec.iter() {
+                match fs::remove_file(&track.filename) {
+                    Ok(_) => {}
+                    Err(_) => {}
+                };
+            }
+            Ok((StatusCode::OK).into_response())
+        }
+        Err(_) => Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response()),
+    }
+}
 
 // async fn signup(
 //     State(state): State<Arc<AppState>>,
