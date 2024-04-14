@@ -19,12 +19,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-#[derive(Default)]
-struct UserData {
-    password_hash: String,
-    active_token: String,
-}
-
 use sqlx::{database, postgres::PgPoolOptions, Pool, Postgres};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
@@ -112,6 +106,16 @@ struct LoginRequest {
     password: String,
 }
 
+fn generate_token(username: &String) -> String {
+    let secret = b"my_secret_key_d47fjs&w3)wj";
+    let token_data = TokenData {
+        username: username.clone(),
+        exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
+    };
+    let encoding_key = EncodingKey::from_secret(secret);
+    encode(&Header::default(), &token_data, &encoding_key).unwrap()
+}
+
 fn decode_token(
     token: &str,
 ) -> Result<jsonwebtoken::TokenData<TokenData>, jsonwebtoken::errors::Error> {
@@ -185,16 +189,6 @@ async fn delete_account(
             return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response());
         }
     };
-}
-
-fn generate_token(username: &String) -> String {
-    let secret = b"my_secret_key_d47fjs&w3)wj";
-    let token_data = TokenData {
-        username: username.clone(),
-        exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
-    };
-    let encoding_key = EncodingKey::from_secret(secret);
-    encode(&Header::default(), &token_data, &encoding_key).unwrap()
 }
 
 async fn login(
