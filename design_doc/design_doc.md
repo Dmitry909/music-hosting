@@ -42,7 +42,7 @@
 
 # Дизайн
 
-![design](design_v2.png)
+![design](design_v3.png)
 
 # API
 
