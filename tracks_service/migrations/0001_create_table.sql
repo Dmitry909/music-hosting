@@ -1,8 +1,7 @@
 CREATE TABLE tracks (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     author_username varchar NOT NULL,
     name varchar NOT NULL,
-    filename varchar NOT NULL,
     cnt_rates bigint NOT NULL,
     sum_rates bigint NOT NULL
 );
