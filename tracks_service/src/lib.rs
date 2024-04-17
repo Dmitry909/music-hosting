@@ -54,6 +54,10 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         let _ = sqlx::query_as!(TracksModel, "TRUNCATE TABLE tracks",)
             .execute(&tracks_pool)
             .await;
+        match fs::remove_dir_all("./tracks") {
+            Ok(_) => {}
+            Err(_) => {}
+        };
     }
 
     // sqlx::migrate!("./migrations").run(&pool);
