@@ -1,6 +1,6 @@
 use axum::{
     body::Bytes,
-    extract::{Multipart, State},
+    extract::{Multipart, State, DefaultBodyLimit},
     http::{header, request, response, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{delete, get, post},
@@ -72,6 +72,7 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         // .route("/comment_track", post(comment_track))
         // .route("/delete_comment", delete(delete_comment))
         // .route("/get_comments", get(get_comments))
+        .layer(DefaultBodyLimit::max(50 * 1024* 1024))
         .with_state(shared_state)
 }
 
