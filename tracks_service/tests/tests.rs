@@ -19,6 +19,7 @@ mod tests {
     use http_body_util::BodyExt;
     use jsonwebtoken::Header;
     use mime;
+    use tokio::sync::Mutex;
     use tower::{Service, ServiceExt};
 
     fn create_get_request(uri: &str) -> Request<Body> {
@@ -51,17 +52,46 @@ mod tests {
             .unwrap()
     }
 
-    fn create_post_request_with_header(
-        uri: &str,
-        body: Body,
-        header_name: &str,
-        header_value: &str,
-    ) -> Request<Body> {
+    fn create_multipart_body(boundary: &str, json_part: &str) -> Body {
+        let mut multipart_body = String::new();
+
+        // Part 1: Text field
+        multipart_body += &format!("--{}\n", boundary);
+        multipart_body +=
+            r#"Content-Disposition: form-data; name="file"; filename="filename_on_user_pc""#;
+        multipart_body += "\n";
+        multipart_body += "Content-Type: text/plain\n";
+        multipart_body += "\n";
+        multipart_body += "content of file";
+        multipart_body += "\n";
+
+        // Part 2: File field
+        multipart_body += &format!("--{}\n", boundary);
+        multipart_body += r#"Content-Disposition: form-data; name="json""#;
+        multipart_body += "\n\n";
+        multipart_body += json_part;
+        multipart_body += "\n";
+
+        // Closing boundary
+        multipart_body += &format!("--{}--\n", boundary);
+        // multipart_body += "\n"; // нужно ли?
+
+        println!("{}", multipart_body);
+
+        Body::from(multipart_body)
+    }
+
+    fn create_post_request_multipart(uri: &str, json_part: &str) -> Request<Body> {
+        let boundary = "------------------------boundary";
+        let body = create_multipart_body(boundary, json_part);
+
         Request::builder()
             .method("POST")
             .uri(uri)
-            .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-            .header(header_name, header_value)
+            .header(
+                http::header::CONTENT_TYPE,
+                format!("multipart/form-data; boundary={}", boundary),
+            )
             .body(body)
             .unwrap()
     }
@@ -127,6 +157,10 @@ mod tests {
 
         let requests = vec![
             create_post_request("/upload_track", Body::empty()),
+            create_post_request_multipart(
+                "/upload_track",
+                r#"{"username": "alex", "track_name": "Golden brown"}"#,
+            ),
             // create_post_request(
             //     "/signup",
             //     Body::from("{\"username\": \"alex_no_password\"}"),
@@ -138,6 +172,7 @@ mod tests {
 
         let expected_exit_codes = vec![
             StatusCode::BAD_REQUEST,
+            StatusCode::BAD_REQUEST,
             // StatusCode::UNPROCESSABLE_ENTITY,
             // StatusCode::UNPROCESSABLE_ENTITY,
             // StatusCode::BAD_REQUEST,
@@ -146,6 +181,8 @@ mod tests {
 
         let expected_bodies = vec![
             "Invalid `boundary` for `multipart/form-data` request",
+            "",
+            // "Invalid `boundary` for `multipart/form-data` request",
             // "Failed to deserialize the JSON body into the target type: missing field `password` at line 1 column 32",
             // "Failed to deserialize the JSON body into the target type: missing field `username` at line 1 column 27",
             // "Failed to parse the request body as JSON: expected value at line 1 column 1",
