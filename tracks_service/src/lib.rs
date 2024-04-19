@@ -107,11 +107,12 @@ async fn delete_account(
     match query_result {
         Ok(tracks_vec) => {
             for track in tracks_vec.iter() {
-                let mut filename: String = track.id.to_string();
-                filename += ".mp3";
+                let filename: String = format!("tracks/{}.mp3", track.id);
                 match fs::remove_file(filename) {
                     Ok(_) => {}
-                    Err(_) => {}
+                    Err(_) => {
+                        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown filesystem error").into_response());
+                    }
                 };
             }
             Ok((StatusCode::OK).into_response())
@@ -196,7 +197,7 @@ async fn upload_track(
             };
 
             let resp = UploadTrackResponse { id: new_line.id };
-            Ok((StatusCode::OK, Json(resp)).into_response())
+            Ok((StatusCode::CREATED, Json(resp)).into_response())
         }
         Err(_) => {
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
