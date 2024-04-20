@@ -53,3 +53,11 @@ def delete_track(username: str, track_id: int):
 
     assert (response.status_code == 200)
     assert (not os.path.exists(f'../tracks/{track_id}.mp3'))
+
+
+def download_track(track_id: int):
+    response = requests.get(
+        f'http://localhost:3001/download_track?id={track_id}')
+
+    assert (response.status_code == 200)
+    return response.content

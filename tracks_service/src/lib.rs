@@ -1,8 +1,8 @@
 use axum::{
-    body::Bytes,
-    extract::{DefaultBodyLimit, Multipart, State},
-    http::{header, request, response, HeaderMap, StatusCode},
-    response::IntoResponse,
+    body::{self, Bytes},
+    extract::{DefaultBodyLimit, Multipart, Query, Request, State},
+    http::{header, request, response, HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
     routing::{delete, get, post},
     Form, Json, Router,
 };
@@ -16,11 +16,12 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::{Read, Write},
+    slice::RSplitN,
     str,
     sync::{Arc, RwLock},
 };
 
-use sqlx::{database, postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::{database, postgres::PgPoolOptions, query, Pool, Postgres};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
     match PgPoolOptions::new().connect(&database_url).await {
@@ -47,6 +48,11 @@ pub struct TracksModel {
     pub sum_rates: i64,
 }
 
+#[derive(Debug)]
+pub struct TracksOnlyIdModel {
+    pub id: i64,
+}
+
 pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
     let tracks_pool = create_pool(tracks_db_url).await;
 
@@ -67,7 +73,7 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_account", delete(delete_account))
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
-        // .route("/download_track", get(download_track))
+        .route("/download_track", get(download_track))
         // .route("/search", get(search))
         // .route("/comment_track", post(comment_track))
         // .route("/delete_comment", delete(delete_comment))
@@ -96,6 +102,11 @@ struct UploadTrackResponse {
 struct DeleteTrackRequest {
     username: String,
     track_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DownloadTrackParams {
+    id: i64,
 }
 
 async fn delete_account(
@@ -251,6 +262,33 @@ async fn delete_track(
         Err(_) => {
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
         }
+    }
+}
+
+async fn download_track(
+    Query(params): Query<DownloadTrackParams>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let file_path = format!("tracks/{}.mp3", params.id);
+
+    match File::open(&file_path) {
+        Ok(mut file) => {
+            let mut buffer = Vec::new();
+            if let Err(_) = file.read_to_end(&mut buffer) {
+                let resp: Bytes = "Failed to read file".as_bytes().into();
+                return Err((StatusCode::INTERNAL_SERVER_ERROR, resp).into_response());
+            }
+
+            let bytes_file: Bytes = buffer.into();
+            let mut resp = (StatusCode::OK, bytes_file).into_response();
+            resp.headers_mut()
+                .insert(header::CONTENT_TYPE, HeaderValue::from_static("audio/mpeg"));
+            resp.headers_mut().insert(
+                header::CONTENT_DISPOSITION,
+                HeaderValue::from_static("attachment; filename=\"file.mp3\""),
+            );
+            Ok(resp)
+        }
+        Err(_) => Ok((StatusCode::NOT_FOUND, "File not found".as_bytes()).into_response()),
     }
 }
 
