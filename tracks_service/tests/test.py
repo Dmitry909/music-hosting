@@ -1,49 +1,27 @@
-import requests
-import json
-import os.path
-import filecmp
+from common import *
 
 
-def delete_account(username: str, username_ids: list):
-    json_data = {"username": username}
+def upload_track_and_delete_account():
+    id_a = upload_track('alex', 'Porokh', 'test_tracks/a.mp3')
+    id_b = upload_track('alex', 'Mimino', 'test_tracks/b.mp3')
+    id_c = upload_track('alex', 'Pelevino', 'test_tracks/c.mp3')
 
-    response = requests.delete(
-        'http://localhost:3001/delete_account', json=json_data)
-
-    assert (response.status_code == 200)
-    for id in username_ids:
-        assert (not os.path.exists(f'../tracks/{id}.mp3'))
+    delete_account('alex', [id_a, id_b, id_c])
+    print('upload_track_and_delete_account success')
 
 
-def upload_track(username: str, track_name: str, file_path: str):
-    json_data = {
-        "username": username,
-        "track_name": track_name
-    }
+def upload_delete_track_and_account():
+    id_a = upload_track('alex', 'Porokh', 'test_tracks/a.mp3')
+    id_b = upload_track('alex', 'Mimino', 'test_tracks/b.mp3')
+    id_c = upload_track('alex', 'Pelevino', 'test_tracks/c.mp3')
 
-    with open(file_path, 'rb') as f:
-        files = {
-            'file': (file_path, f, 'audio/mpeg'),
-            'json': (None, json.dumps(json_data), 'application/json')
-        }
+    delete_track('alex', id_a)
+    assert (os.path.exists(f'../tracks/{id_b}.mp3'))
+    assert (os.path.exists(f'../tracks/{id_c}.mp3'))
 
-        response = requests.post(
-            'http://localhost:3001/upload_track', files=files)
-
-    assert (response.status_code == 201)
-    obj = json.loads(response.text)
-    assert ('id' in obj)
-    assert (isinstance(obj['id'], int))
-    assert (len(obj) == 1)
-    id = obj['id']
-    assert (os.path.isfile(f'../tracks/{id}.mp3'))
-    assert (filecmp.cmp(f'../tracks/{id}.mp3', file_path, shallow=False))
-
-    return id
+    delete_account('alex', [id_b, id_c])
+    print('upload_delete_track_and_account success')
 
 
-id_a = upload_track('alex', 'Porokh', 'test_tracks/a.mp3')
-id_b = upload_track('alex', 'Mimino', 'test_tracks/b.mp3')
-id_c = upload_track('alex', 'Pelevino', 'test_tracks/c.mp3')
-
-delete_account('alex', [id_a, id_b, id_c])
+upload_track_and_delete_account()
+upload_delete_track_and_account()

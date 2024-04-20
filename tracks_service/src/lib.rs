@@ -1,6 +1,6 @@
 use axum::{
     body::Bytes,
-    extract::{Multipart, State, DefaultBodyLimit},
+    extract::{DefaultBodyLimit, Multipart, State},
     http::{header, request, response, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{delete, get, post},
@@ -66,13 +66,13 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
     Router::new()
         .route("/delete_account", delete(delete_account))
         .route("/upload_track", post(upload_track))
-        // .route("/delete_track", delete(delete_track))
+        .route("/delete_track", delete(delete_track))
         // .route("/download_track", get(download_track))
         // .route("/search", get(search))
         // .route("/comment_track", post(comment_track))
         // .route("/delete_comment", delete(delete_comment))
         // .route("/get_comments", get(get_comments))
-        .layer(DefaultBodyLimit::max(50 * 1024* 1024))
+        .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .with_state(shared_state)
 }
 
@@ -90,6 +90,12 @@ struct UploadTrackRequest {
 #[derive(Serialize, Deserialize, Debug)]
 struct UploadTrackResponse {
     id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DeleteTrackRequest {
+    username: String,
+    track_id: i64,
 }
 
 async fn delete_account(
@@ -111,7 +117,11 @@ async fn delete_account(
                 match fs::remove_file(filename) {
                     Ok(_) => {}
                     Err(_) => {
-                        return Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown filesystem error").into_response());
+                        return Err((
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Unknown filesystem error",
+                        )
+                            .into_response());
                     }
                 };
             }
@@ -199,6 +209,45 @@ async fn upload_track(
             let resp = UploadTrackResponse { id: new_line.id };
             Ok((StatusCode::CREATED, Json(resp)).into_response())
         }
+        Err(_) => {
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
+        }
+    }
+}
+
+async fn delete_track(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<DeleteTrackRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let query_result = sqlx::query_as!(
+        TracksModel,
+        "DELETE FROM tracks WHERE id=$1 AND author_username=$2 RETURNING *",
+        input_payload.track_id,
+        input_payload.username,
+    )
+    .fetch_all(&state.tracks_pool)
+    .await;
+
+    match query_result {
+        Ok(tracks_vec) => match tracks_vec.len() {
+            0 => Ok((
+                StatusCode::NOT_FOUND,
+                format!(
+                    "Track with id {} doesn't exist or it is not yours",
+                    input_payload.track_id
+                ),
+            )
+                .into_response()),
+            1 => match fs::remove_file(format!("tracks/{}.mp3", input_payload.track_id)) {
+                Ok(_) => Ok((StatusCode::OK).into_response()),
+                Err(_) => Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Unknown filesystem error",
+                )
+                    .into_response()),
+            },
+            _ => Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response()),
+        },
         Err(_) => {
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
         }
