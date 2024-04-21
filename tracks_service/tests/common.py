@@ -76,3 +76,16 @@ def search(query: str, expected_ids: set):
         assert (isinstance(el['id'], int))
         ids.add(el['id'])
     assert (ids == expected_ids)
+
+
+def change_rate(track_id: int, cnt_rates_delta: int, sum_rates_delta: int):
+    json_data = {
+        "track_id": track_id,
+        "cnt_rates_delta": cnt_rates_delta,
+        "sum_rates_delta": sum_rates_delta,
+    }
+
+    response = requests.put(
+        'http://localhost:3001/change_rate', json=json_data)
+
+    assert (response.status_code == 200)

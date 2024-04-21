@@ -3,7 +3,7 @@ use axum::{
     extract::{DefaultBodyLimit, Multipart, Query, Request, State},
     http::{header, request, response, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Form, Json, Router,
 };
 use chrono::{Duration, Local};
@@ -21,7 +21,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use sqlx::{database, postgres::PgPoolOptions, query, Pool, Postgres};
+use sqlx::{database, postgres::PgPoolOptions, query, query_as, Pool, Postgres};
 
 pub async fn create_pool(database_url: &str) -> Pool<Postgres> {
     match PgPoolOptions::new().connect(&database_url).await {
@@ -73,11 +73,13 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_account", delete(delete_account))
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
+        // .route("/get_track_info", get(get_track_info))
         .route("/download_track", get(download_track))
         .route("/search", get(search))
-        // .route("/comment_track", post(comment_track))
-        // .route("/delete_comment", delete(delete_comment))
-        // .route("/get_comments", get(get_comments))
+        .route("/change_rate", put(change_rate))
+        // .route("/comment_track", post(comment_track)) // TODO
+        // .route("/delete_comment", delete(delete_comment)) // TODO
+        // .route("/get_comments", get(get_comments)) // TODO
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .with_state(shared_state)
 }
@@ -120,6 +122,13 @@ struct SearchResponseItem {
     author_username: String,
     track_name: String,
     rating: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct ChangeRateRequest {
+    track_id: i64,
+    cnt_rates_delta: i64, // 1 если это новая оценка, 0 если изменение старой
+    sum_rates_delta: i64, // просто оценка если это новая оценка, дельта изменения если это старая оценка
 }
 
 async fn delete_account(
@@ -239,6 +248,14 @@ async fn upload_track(
     }
 }
 
+// TODO
+// async fn get_track_info(
+//     State(state): State<Arc<AppState>>,
+//     Json(input_payload): Json<GetTrackInfoRequest>,
+// ) -> Result<impl IntoResponse, impl IntoResponse> {
+//     let request = 
+// }
+
 async fn delete_track(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<DeleteTrackRequest>,
@@ -334,6 +351,28 @@ async fn search(
                 .collect();
             Ok((StatusCode::OK, Json(result)).into_response())
         }
+        Err(_) => {
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
+        }
+    }
+}
+
+async fn change_rate(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<ChangeRateRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let query_result = sqlx::query_as!(
+        TracksModel,
+        "UPDATE tracks SET cnt_rates = cnt_rates + $1, sum_rates = sum_rates + $2 WHERE id=$3",
+        input_payload.cnt_rates_delta,
+        input_payload.sum_rates_delta,
+        input_payload.track_id,
+    )
+    .execute(&state.tracks_pool)
+    .await;
+
+    match query_result {
+        Ok(_) => Ok((StatusCode::OK).into_response()),
         Err(_) => {
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
         }
