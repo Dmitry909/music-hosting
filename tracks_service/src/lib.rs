@@ -74,7 +74,7 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
         .route("/download_track", get(download_track))
-        // .route("/search", get(search))
+        .route("/search", get(search))
         // .route("/comment_track", post(comment_track))
         // .route("/delete_comment", delete(delete_comment))
         // .route("/get_comments", get(get_comments))
@@ -107,6 +107,19 @@ struct DeleteTrackRequest {
 #[derive(Serialize, Deserialize, Debug)]
 struct DownloadTrackParams {
     id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct SearchParams {
+    query: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct SearchResponseItem {
+    id: i64,
+    author_username: String,
+    track_name: String,
+    rating: f64,
 }
 
 async fn delete_account(
@@ -289,6 +302,41 @@ async fn download_track(
             Ok(resp)
         }
         Err(_) => Ok((StatusCode::NOT_FOUND, "File not found".as_bytes()).into_response()),
+    }
+}
+
+async fn search(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<SearchParams>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let template = format!("%{}%", params.query);
+    let query_result = sqlx::query_as!(
+        TracksModel,
+        "SELECT * FROM tracks WHERE name LIKE $1",
+        template
+    )
+    .fetch_all(&state.tracks_pool)
+    .await;
+
+    match query_result {
+        Ok(vec_tracks) => {
+            let result: Vec<SearchResponseItem> = vec_tracks
+                .into_iter()
+                .map(|track| SearchResponseItem {
+                    id: track.id,
+                    author_username: track.author_username,
+                    track_name: track.name,
+                    rating: match track.cnt_rates {
+                        0 => 0.0,
+                        _ => (track.sum_rates as f64) / (track.cnt_rates as f64),
+                    },
+                })
+                .collect();
+            Ok((StatusCode::OK, Json(result)).into_response())
+        }
+        Err(_) => {
+            Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
+        }
     }
 }
 

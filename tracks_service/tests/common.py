@@ -61,3 +61,18 @@ def download_track(track_id: int):
 
     assert (response.status_code == 200)
     return response.content
+
+
+def search(query: str, expected_ids: set):
+    response = requests.get(f'http://localhost:3001/search?query={query}')
+
+    assert (response.status_code == 200)
+    obj = json.loads(response.content)
+    assert (isinstance(obj, list))
+    ids = set()
+    for el in obj:
+        assert (isinstance(el, dict))
+        assert ('id' in el)
+        assert (isinstance(el['id'], int))
+        ids.add(el['id'])
+    assert (ids == expected_ids)
