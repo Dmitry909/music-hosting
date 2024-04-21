@@ -40,6 +40,7 @@ def test_upload_and_download():
     with open(file_path, 'rb') as f:
         track_content_real = f.read()
         assert (track_content_got == track_content_real)
+    delete_account(account, [id])
 
     print('test_upload_and_download success')
 
@@ -57,6 +58,7 @@ def test_search():
     search(f'q{common_part}', {id_b, id_c})
     search(f'q{common_part}cq', {id_c})
     search(f'{common_part}c', {id_a, id_c})
+    search(f'{common_part}{common_part}', set())
 
     delete_account(account1, [id_a])
     delete_account(account2, [id_b, id_c])
