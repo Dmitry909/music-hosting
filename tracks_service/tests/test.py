@@ -66,7 +66,36 @@ def test_search():
     print('test_search success')
 
 
+def test_change_rate():
+    account = random_str(10)
+    track_name = random_str(10)
+    id = upload_track(account, track_name, 'test_tracks/a.mp3')
+    list_tracks = search(track_name, {id})
+    assert (list_tracks[0]['cnt_rates'] == 0)
+    assert (list_tracks[0]['sum_rates'] == 0)
+
+    change_rate(id, 1, 4)
+    list_tracks = search(track_name, {id})
+    assert (list_tracks[0]['cnt_rates'] == 1)
+    assert (list_tracks[0]['sum_rates'] == 4)
+
+    change_rate(id, 0, -1)
+    list_tracks = search(track_name, {id})
+    assert (list_tracks[0]['cnt_rates'] == 1)
+    assert (list_tracks[0]['sum_rates'] == 3)
+
+    change_rate(id, -1, -3)
+    list_tracks = search(track_name, {id})
+    assert (list_tracks[0]['cnt_rates'] == 0)
+    assert (list_tracks[0]['sum_rates'] == 0)
+
+    delete_account(account, [id])
+
+    print('test_change_rate success')
+
+
 test_upload_track_and_delete_account()
 test_upload_delete_track_and_account()
 test_upload_and_download()
 test_search()
+test_change_rate()

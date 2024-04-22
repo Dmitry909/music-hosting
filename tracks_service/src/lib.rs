@@ -39,7 +39,7 @@ struct AppState {
     tracks_pool: Pool<Postgres>,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TracksModel {
     pub id: i64,
     pub author_username: String,
@@ -73,7 +73,6 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_account", delete(delete_account))
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
-        // .route("/get_track_info", get(get_track_info))
         .route("/download_track", get(download_track))
         .route("/search", get(search))
         .route("/change_rate", put(change_rate))
@@ -248,14 +247,6 @@ async fn upload_track(
     }
 }
 
-// TODO
-// async fn get_track_info(
-//     State(state): State<Arc<AppState>>,
-//     Json(input_payload): Json<GetTrackInfoRequest>,
-// ) -> Result<impl IntoResponse, impl IntoResponse> {
-//     let request = 
-// }
-
 async fn delete_track(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<DeleteTrackRequest>,
@@ -336,21 +327,7 @@ async fn search(
     .await;
 
     match query_result {
-        Ok(vec_tracks) => {
-            let result: Vec<SearchResponseItem> = vec_tracks
-                .into_iter()
-                .map(|track| SearchResponseItem {
-                    id: track.id,
-                    author_username: track.author_username,
-                    track_name: track.name,
-                    rating: match track.cnt_rates {
-                        0 => 0.0,
-                        _ => (track.sum_rates as f64) / (track.cnt_rates as f64),
-                    },
-                })
-                .collect();
-            Ok((StatusCode::OK, Json(result)).into_response())
-        }
+        Ok(vec_tracks) => Ok((StatusCode::OK, Json(vec_tracks)).into_response()),
         Err(_) => {
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
         }

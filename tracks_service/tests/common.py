@@ -76,6 +76,7 @@ def search(query: str, expected_ids: set):
         assert (isinstance(el['id'], int))
         ids.add(el['id'])
     assert (ids == expected_ids)
+    return obj
 
 
 def change_rate(track_id: int, cnt_rates_delta: int, sum_rates_delta: int):
