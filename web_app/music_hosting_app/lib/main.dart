@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(MusicHostingApp());
@@ -111,12 +112,35 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   TextEditingController _usernameController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
+  String _signupResult = '';
 
-  void _signup() {
+  Future<void> _signup() async {
     String username = _usernameController.text;
     String password = _passwordController.text;
-    // TODO: Implement signup functionality
-    print('Signup: Username = $username, Password = $password');
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:3002/signup'),
+        body: {
+          'username': username,
+          'password': password,
+        },
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        setState(() {
+          _signupResult = 'You were registered';
+        });
+      } else {
+        setState(() {
+          _signupResult = 'Error';
+        });
+      }
+    } catch (error) {
+      setState(() {
+        _signupResult = 'Error';
+      });
+    }
   }
 
   @override
@@ -144,6 +168,15 @@ class _SignupPageState extends State<SignupPage> {
             ElevatedButton(
               onPressed: _signup,
               child: Text('Sign up'),
+            ),
+            SizedBox(height: 16),
+            Text(
+              _signupResult,
+              style: TextStyle(
+                color: _signupResult == 'You were registered'
+                    ? Colors.green
+                    : Colors.red,
+              ),
             ),
           ],
         ),
