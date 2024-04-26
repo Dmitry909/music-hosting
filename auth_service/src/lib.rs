@@ -11,6 +11,7 @@ use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{de, forward_to_deserialize_any, Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::thread;
 use std::{
     borrow::Borrow,
     collections::HashMap,
@@ -116,7 +117,7 @@ fn generate_token(username: &String) -> String {
     let secret = b"my_secret_key_d47fjs&w3)wj";
     let token_data = TokenData {
         username: username.clone(),
-        exp: (Local::now() + Duration::hours(24)).timestamp() as usize,
+        exp: (Local::now() + chrono::Duration::hours(24)).timestamp() as usize,
     };
     let encoding_key = EncodingKey::from_secret(secret);
     encode(&Header::default(), &token_data, &encoding_key).unwrap()
