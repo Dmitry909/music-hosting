@@ -63,12 +63,40 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   TextEditingController _usernameController = TextEditingController();
   TextEditingController _passwordController = TextEditingController();
+  String _loginResult = '';
 
-  void _login() {
+  Future<void> _login() async {
     String username = _usernameController.text;
     String password = _passwordController.text;
-    // TODO: Implement login functionality
-    print('Login: Username = $username, Password = $password');
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:3002/login'),
+        headers: {'Content-Type': 'application/json'},
+        // body: json.encode({
+        //   'username': username,
+        //   'password': password,
+        // }),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WelcomePage(username: username),
+          ),
+        );
+      } else {
+        final errorText = response.body;
+        setState(() {
+          _loginResult = 'Error: $errorText';
+        });
+      }
+    } catch (error) {
+      setState(() {
+        _loginResult = 'Error: $error';
+      });
+    }
   }
 
   @override
@@ -97,7 +125,33 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: _login,
               child: Text('Log in'),
             ),
+            SizedBox(height: 16),
+            Text(
+              _loginResult,
+              style: TextStyle(color: Colors.red),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class WelcomePage extends StatelessWidget {
+  final String username;
+
+  const WelcomePage({Key? key, required this.username}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Welcome'),
+      ),
+      body: Center(
+        child: Text(
+          'Hello, $username!',
+          style: TextStyle(fontSize: 24),
         ),
       ),
     );
