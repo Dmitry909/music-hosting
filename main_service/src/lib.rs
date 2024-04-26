@@ -44,28 +44,28 @@ struct SignupRequest {
     password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct DeleteAccountRequest {
     username: String,
     password: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct LoginRequest {
     username: String,
     password: String,
 }
 
-async fn send_requests_with_timeouts(
+async fn send_requests_with_timeouts<InputJsonType: Serialize>(
     url: &str,
     durations: Vec<Duration>,
-    bytes_req: Bytes,
+    input_payload: InputJsonType,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let client = reqwest::Client::new();
 
     for duration in durations.iter() {
         // TODO избавиться от clone() на след. строке
-        let timeout_result = timeout(*duration, client.post(url).body(bytes_req.clone()).send()).await;
+        let timeout_result = timeout(*duration, client.post(url).json(&input_payload).send()).await;
 
         match timeout_result {
             Ok(auth_response_result) => match auth_response_result {
@@ -98,9 +98,9 @@ async fn signup(
         Duration::from_millis(1200),
     ];
     // TODO сделать send_requests_with_timeouts шаблонной вместо создания Bytes
-    let bytes_req = Bytes::from(serde_json::to_vec(&input_payload).unwrap());
+    // let bytes_req = Bytes::from(serde_json::to_vec(&input_payload).unwrap());
 
-    send_requests_with_timeouts(url, durations, bytes_req).await
+    send_requests_with_timeouts(url, durations, input_payload).await
 }
 
 // async fn delete_account(
