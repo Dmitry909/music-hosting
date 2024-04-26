@@ -29,7 +29,7 @@ pub async fn create_app() -> Router {
         // .route("/", get(root_handler))
         .route("/signup", post(signup))
         // .route("/delete_account", delete(delete_account))
-        // .route("/login", post(login))
+        .route("/login", post(login))
         // .route("/logout", post(logout))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
 }
@@ -58,21 +58,27 @@ struct LoginRequest {
 
 async fn send_requests_with_timeouts<InputJsonType: Serialize>(
     url: &str,
-    durations: Vec<Duration>,
     input_payload: InputJsonType,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
+    let durations = vec![
+        Duration::from_millis(150),
+        Duration::from_millis(300),
+        Duration::from_millis(600),
+        Duration::from_millis(1200),
+    ];
+
     let client = reqwest::Client::new();
 
     for duration in durations.iter() {
-        // TODO избавиться от clone() на след. строке
         let timeout_result = timeout(*duration, client.post(url).json(&input_payload).send()).await;
 
         match timeout_result {
             Ok(auth_response_result) => match auth_response_result {
                 Ok(response) => {
                     let resp_status = response.status();
-                    let resp_body = response.bytes().await.unwrap();
-                    return Ok((resp_status, resp_body).into_response());
+                    let resp_headers = response.headers().clone();
+                    let resp_body = response.bytes().await.unwrap_or_default();
+                    return Ok((resp_status, resp_headers, resp_body).into_response());
                 }
                 Err(_) => {
                     return Err(
@@ -91,16 +97,8 @@ async fn signup(
     Json(input_payload): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let url = "http://localhost:3000/signup";
-    let durations = vec![
-        Duration::from_millis(150),
-        Duration::from_millis(300),
-        Duration::from_millis(600),
-        Duration::from_millis(1200),
-    ];
-    // TODO сделать send_requests_with_timeouts шаблонной вместо создания Bytes
-    // let bytes_req = Bytes::from(serde_json::to_vec(&input_payload).unwrap());
 
-    send_requests_with_timeouts(url, durations, input_payload).await
+    send_requests_with_timeouts(url, input_payload).await
 }
 
 // async fn delete_account(
@@ -117,8 +115,10 @@ async fn signup(
 //     Ok((StatusCode::NOT_IMPLEMENTED).into_response())
 // }
 
-// async fn login(
-//     Json(input_payload): Json<LoginRequest>,
-// ) -> Result<impl IntoResponse, impl IntoResponse> {
-//     // the same as the signup but with token also
-// }
+async fn login(
+    Json(input_payload): Json<LoginRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let url = "http://localhost:3000/login";
+
+    send_requests_with_timeouts(url, input_payload).await
+}
