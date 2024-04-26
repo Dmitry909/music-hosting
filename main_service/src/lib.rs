@@ -24,6 +24,26 @@ use std::{
 use tokio::time::timeout;
 use tokio::time::Duration;
 
+#[macro_use]
+extern crate lazy_static;
+
+const AUTH_HOST: &str = "http://localhost:3000";
+const TRACKS_HOST: &str = "http://localhost:3001";
+
+// EP = ENDPOINT
+lazy_static! {
+    pub static ref SIGNUP_EP: String = format!("{}/signup", AUTH_HOST);
+    pub static ref LOGIN_EP: String = format!("{}/login", AUTH_HOST);
+    pub static ref LOGOUT_EP: String = format!("{}/logout", AUTH_HOST);
+    pub static ref DELETE_ACCOUNT_EP_AUTH: String = format!("{}/delete_account", AUTH_HOST);
+    pub static ref CHECK_TOKEN_EP: String = format!("{}/check_token", AUTH_HOST);
+    //
+    pub static ref UPLOAD_TRACK_EP: String = format!("{}/upload_track", TRACKS_HOST);
+    pub static ref DELETE_ACCOUNT_EP_TRACKS: String = format!("{}/delete_account", TRACKS_HOST);
+    pub static ref DELETE_TRACK_EP: String = format!("{}/delete_track", TRACKS_HOST);
+    pub static ref SEARCH_EP: String = format!("{}/search", TRACKS_HOST);
+}
+
 pub async fn create_app() -> Router {
     Router::new()
         // .route("/", get(root_handler))
@@ -74,7 +94,15 @@ async fn send_requests_with_timeouts<InputJsonType: Serialize>(
     let client = reqwest::Client::new();
 
     for duration in durations.iter() {
-        let timeout_result = timeout(*duration, client.post(url).json(&input_payload).send()).await;
+        let timeout_result = timeout(
+            *duration,
+            client
+                .post(url)
+                .json(&input_payload)
+                .headers(headers.clone())
+                .send(),
+        )
+        .await;
 
         match timeout_result {
             Ok(auth_response_result) => match auth_response_result {
@@ -100,9 +128,7 @@ async fn send_requests_with_timeouts<InputJsonType: Serialize>(
 async fn signup(
     Json(input_payload): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let url = "http://localhost:3000/signup";
-
-    send_requests_with_timeouts(url, HeaderMap::new(), input_payload).await
+    send_requests_with_timeouts(&SIGNUP_EP, HeaderMap::new(), input_payload).await
 }
 
 // async fn delete_account(
@@ -122,13 +148,9 @@ async fn signup(
 async fn login(
     Json(input_payload): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let url = "http://localhost:3000/login";
-
-    send_requests_with_timeouts(url, HeaderMap::new(), input_payload).await
+    send_requests_with_timeouts(&LOGIN_EP, HeaderMap::new(), input_payload).await
 }
 
 async fn logout(headers: HeaderMap) -> Result<impl IntoResponse, impl IntoResponse> {
-    let url = "http://localhost:3000/logout";
-
-    send_requests_with_timeouts(url, headers, EmptyRequest {}).await
+    send_requests_with_timeouts(&LOGOUT_EP, headers, EmptyRequest {}).await
 }
