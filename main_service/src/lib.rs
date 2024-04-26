@@ -28,6 +28,9 @@ pub async fn create_app() -> Router {
     Router::new()
         // .route("/", get(root_handler))
         .route("/signup", post(signup))
+        // .route("/delete_account", delete(delete_account))
+        // .route("/login", post(login))
+        // .route("/logout", post(logout))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
 }
 
@@ -41,26 +44,28 @@ struct SignupRequest {
     password: String,
 }
 
-#[derive(Serialize, Deserialize)]
-struct SignupResponse {
+#[derive(Deserialize)]
+struct DeleteAccountRequest {
     username: String,
+    password: String,
 }
 
-async fn signup(
-    Json(input_payload): Json<SignupRequest>,
+#[derive(Deserialize)]
+struct LoginRequest {
+    username: String,
+    password: String,
+}
+
+async fn send_requests_with_timeouts(
+    url: &str,
+    durations: Vec<Duration>,
+    bytes_req: Bytes,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let client = reqwest::Client::new();
-    let url = "http://localhost:3000/signup";
-
-    let durations = vec![
-        Duration::from_millis(150),
-        Duration::from_millis(300),
-        Duration::from_millis(600),
-        Duration::from_millis(1200),
-    ];
 
     for duration in durations.iter() {
-        let timeout_result = timeout(*duration, client.post(url).json(&input_payload).send()).await;
+        // TODO избавиться от clone() на след. строке
+        let timeout_result = timeout(*duration, client.post(url).body(bytes_req.clone()).send()).await;
 
         match timeout_result {
             Ok(auth_response_result) => match auth_response_result {
@@ -79,5 +84,41 @@ async fn signup(
         };
     }
 
-    return Err((StatusCode::SERVICE_UNAVAILABLE, "Auth service unavailable").into_response());
+    Err((StatusCode::SERVICE_UNAVAILABLE, "Auth service unavailable").into_response())
 }
+
+async fn signup(
+    Json(input_payload): Json<SignupRequest>,
+) -> Result<impl IntoResponse, impl IntoResponse> {
+    let url = "http://localhost:3000/signup";
+    let durations = vec![
+        Duration::from_millis(150),
+        Duration::from_millis(300),
+        Duration::from_millis(600),
+        Duration::from_millis(1200),
+    ];
+    // TODO сделать send_requests_with_timeouts шаблонной вместо создания Bytes
+    let bytes_req = Bytes::from(serde_json::to_vec(&input_payload).unwrap());
+
+    send_requests_with_timeouts(url, durations, bytes_req).await
+}
+
+// async fn delete_account(
+//     Json(input_payload): Json<DeleteAccountRequest>,
+// ) -> Result<impl IntoResponse, impl IntoResponse> {
+//     // TODO send to all other services:
+//     // 0) respond to user immediately, all next requests do in separate threads
+//     // 1) auth service (delete line with user from db there)
+//     // 2) tracks service (delete all user's tracks)
+//     // 3) playlists service (delete all user's playlists)
+//     // 4) rates service (delete all user's rates from db)
+//     // NOTE: don't change rates on tracks that this users rated.
+
+//     Ok((StatusCode::NOT_IMPLEMENTED).into_response())
+// }
+
+// async fn login(
+//     Json(input_payload): Json<LoginRequest>,
+// ) -> Result<impl IntoResponse, impl IntoResponse> {
+//     // the same as the signup but with token also
+// }
