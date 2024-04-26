@@ -30,7 +30,7 @@ pub async fn create_app() -> Router {
         .route("/signup", post(signup))
         // .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
-        // .route("/logout", post(logout))
+        .route("/logout", post(logout))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
 }
 
@@ -56,8 +56,12 @@ struct LoginRequest {
     password: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct EmptyRequest {}
+
 async fn send_requests_with_timeouts<InputJsonType: Serialize>(
     url: &str,
+    headers: HeaderMap,
     input_payload: InputJsonType,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let durations = vec![
@@ -98,7 +102,7 @@ async fn signup(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let url = "http://localhost:3000/signup";
 
-    send_requests_with_timeouts(url, input_payload).await
+    send_requests_with_timeouts(url, HeaderMap::new(), input_payload).await
 }
 
 // async fn delete_account(
@@ -120,5 +124,11 @@ async fn login(
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let url = "http://localhost:3000/login";
 
-    send_requests_with_timeouts(url, input_payload).await
+    send_requests_with_timeouts(url, HeaderMap::new(), input_payload).await
+}
+
+async fn logout(headers: HeaderMap) -> Result<impl IntoResponse, impl IntoResponse> {
+    let url = "http://localhost:3000/logout";
+
+    send_requests_with_timeouts(url, headers, EmptyRequest {}).await
 }
