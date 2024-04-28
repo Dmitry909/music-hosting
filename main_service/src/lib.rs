@@ -44,8 +44,8 @@ pub async fn create_app() -> Router {
         //
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
-        // .route("/download_track", get(download_track))
-        // .route("/search", get(search))
+        .route("/download_track", get(download_track))
+        .route("/search", get(search))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
 }
 
@@ -91,8 +91,14 @@ struct DownloadTrackParams {
     id: i64,
 }
 
-async fn send_requests_with_timeouts<InputJsonType: Serialize>(
+#[derive(Serialize, Deserialize, Debug)]
+struct SearchParams {
+    query: String,
+}
+
+async fn send_requests_with_timeouts<ParamsType: Serialize, InputJsonType: Serialize>(
     url: &str,
+    params: ParamsType,
     headers: HeaderMap,
     input_payload: &InputJsonType,
     service_name: &str,
@@ -111,6 +117,7 @@ async fn send_requests_with_timeouts<InputJsonType: Serialize>(
             *duration,
             client
                 .post(url)
+                .query(&params)
                 .json(input_payload)
                 .headers(headers.clone())
                 .send(),
@@ -141,15 +148,15 @@ async fn send_requests_with_timeouts<InputJsonType: Serialize>(
 }
 
 async fn signup(Json(input_payload): Json<SignupRequest>) -> Response {
-    send_requests_with_timeouts(&SIGNUP_EP, HeaderMap::new(), &input_payload, "Auth").await
+    send_requests_with_timeouts(&SIGNUP_EP, {}, HeaderMap::new(), &input_payload, "Auth").await
 }
 
 async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
-    send_requests_with_timeouts(&LOGIN_EP, HeaderMap::new(), &input_payload, "Auth").await
+    send_requests_with_timeouts(&LOGIN_EP, {}, HeaderMap::new(), &input_payload, "Auth").await
 }
 
 async fn logout(headers: HeaderMap) -> Response {
-    send_requests_with_timeouts(&LOGOUT_EP, headers, &EmptyRequest {}, "Auth").await
+    send_requests_with_timeouts(&LOGOUT_EP, {}, headers, &EmptyRequest {}, "Auth").await
 }
 
 async fn send_one_request<InputJsonType: Serialize>(
@@ -219,6 +226,7 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
     // TODO этот запрос слать уже в другом треде, пользователю ответить сразу
     send_requests_with_timeouts(
         &DELETE_ACCOUNT_EP_TRACKS,
+        {},
         HeaderMap::new(),
         &input_payload,
         "Auth",
@@ -256,12 +264,34 @@ async fn upload_track(mut multipart: Multipart) -> Response {
 }
 
 async fn delete_track(Json(input_payload): Json<DeleteTrackRequest>) -> Response {
-    send_requests_with_timeouts(&DELETE_TRACK_EP, HeaderMap::new(), &input_payload, "Tracks").await
+    send_requests_with_timeouts(
+        &DELETE_TRACK_EP,
+        {},
+        HeaderMap::new(),
+        &input_payload,
+        "Tracks",
+    )
+    .await
 }
 
-// async fn download_track(
-//     Query(params): Query<DownloadTrackParams>,
-// ) -> Response {
-//     let endpoint = format!()
-//     send_requests_with_timeouts(&DOWNLOAD_TRACK_EP, HeaderMap::new(), &EmptyRequest{}, "Tracks").await
-// }
+async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
+    send_requests_with_timeouts(
+        &DOWNLOAD_TRACK_EP,
+        params,
+        HeaderMap::new(),
+        &EmptyRequest {},
+        "Tracks",
+    )
+    .await
+}
+
+async fn search(Query(params): Query<SearchParams>) -> Response {
+    send_requests_with_timeouts(
+        &SEARCH_EP,
+        params,
+        HeaderMap::new(),
+        &EmptyRequest {},
+        "Tracks",
+    )
+    .await
+}
