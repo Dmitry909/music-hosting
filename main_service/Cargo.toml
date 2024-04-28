@@ -19,6 +19,6 @@ mime = "0.3.17"
 http-body-util = "0.1.0"
 sha2 = "0.10.0"
 hex = "0.4.3"
-reqwest = { version = "0.12.4", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json", "multipart"] }
 futures = "0.3"
 lazy_static = "1.4.0"

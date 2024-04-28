@@ -30,6 +30,7 @@ lazy_static! {
     pub static ref UPLOAD_TRACK_EP: String = format!("{}/upload_track", TRACKS_HOST);
     pub static ref DELETE_ACCOUNT_EP_TRACKS: String = format!("{}/delete_account", TRACKS_HOST);
     pub static ref DELETE_TRACK_EP: String = format!("{}/delete_track", TRACKS_HOST);
+    pub static ref DOWNLOAD_TRACK_EP: String = format!("{}/download_track", TRACKS_HOST);
     pub static ref SEARCH_EP: String = format!("{}/search", TRACKS_HOST);
 }
 
@@ -40,6 +41,11 @@ pub async fn create_app() -> Router {
         .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
         .route("/logout", post(logout))
+        //
+        .route("/upload_track", post(upload_track))
+        .route("/delete_track", delete(delete_track))
+        // .route("/download_track", get(download_track))
+        // .route("/search", get(search))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
 }
 
@@ -67,6 +73,23 @@ struct LoginRequest {
 
 #[derive(Serialize, Deserialize)]
 struct EmptyRequest {}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DeleteTrackRequest {
+    username: String,
+    track_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct UploadTrackRequest {
+    username: String,
+    track_name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DownloadTrackParams {
+    id: i64,
+}
 
 async fn send_requests_with_timeouts<InputJsonType: Serialize>(
     url: &str,
@@ -204,3 +227,41 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
 
     return (StatusCode::OK).into_response();
 }
+
+async fn upload_track(mut multipart: Multipart) -> Response {
+    let mut form = reqwest::multipart::Form::new();
+
+    while let Some(field) = multipart.next_field().await.unwrap() {
+        let name = field.name().unwrap().to_string();
+        let data = field.bytes().await.unwrap();
+        let part = reqwest::multipart::Part::stream(data);
+        form = form.part(name, part);
+    }
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://localhost:3002")
+        .multipart(form)
+        .send()
+        .await;
+
+    match response {
+        Ok(response) => {
+            let status = response.status();
+            let body = response.bytes().await.unwrap();
+            (status, body).into_response()
+        }
+        Err(_) => (StatusCode::SERVICE_UNAVAILABLE).into_response(),
+    }
+}
+
+async fn delete_track(Json(input_payload): Json<DeleteTrackRequest>) -> Response {
+    send_requests_with_timeouts(&DELETE_TRACK_EP, HeaderMap::new(), &input_payload, "Tracks").await
+}
+
+// async fn download_track(
+//     Query(params): Query<DownloadTrackParams>,
+// ) -> Response {
+//     let endpoint = format!()
+//     send_requests_with_timeouts(&DOWNLOAD_TRACK_EP, HeaderMap::new(), &EmptyRequest{}, "Tracks").await
+// }
