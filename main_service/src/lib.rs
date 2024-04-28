@@ -4,29 +4,14 @@ use axum::{
     http::{header, request, response, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
-    Form, Json, Router,
+    Json, Router,
 };
-use chrono::Local;
-use hex;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use reqwest;
-use serde::{
-    de::{self, value},
-    forward_to_deserialize_any, Deserialize, Serialize,
-};
-use sha2::{Digest, Sha256};
-use std::{
-    borrow::Borrow,
-    collections::HashMap,
-    fs::{self, File},
-    io::{Read, Write},
-    slice::RSplitN,
-    str,
-    sync::{Arc, RwLock},
-};
+use serde::{Deserialize, Serialize};
+use std::str;
 use tokio::time::timeout;
 use tokio::time::Duration;
-use tracing::instrument::WithSubscriber;
 
 #[macro_use]
 extern crate lazy_static;
@@ -88,7 +73,7 @@ async fn send_requests_with_timeouts<InputJsonType: Serialize>(
     headers: HeaderMap,
     input_payload: &InputJsonType,
     service_name: &str,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+) -> Response {
     let durations = vec![
         Duration::from_millis(150),
         Duration::from_millis(300),
@@ -115,41 +100,32 @@ async fn send_requests_with_timeouts<InputJsonType: Serialize>(
                     let resp_status = response.status();
                     let resp_headers = response.headers().clone();
                     let resp_body = response.bytes().await.unwrap_or_default();
-                    return Ok((resp_status, resp_headers, resp_body).into_response());
+                    return (resp_status, resp_headers, resp_body).into_response();
                 }
                 Err(_) => {
-                    return Err(
-                        (StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response()
-                    );
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "Unknown error").into_response();
                 }
             },
             Err(_) => {}
         };
     }
 
-    Err((
+    (
         StatusCode::SERVICE_UNAVAILABLE,
         format!("{} service unavailable", service_name),
     )
-        .into_response())
+        .into_response()
 }
 
-async fn signup(
-    Json(input_payload): Json<SignupRequest>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
-    // TODO signup -- не идемпотентная операция, нельзя 2 раза делать запрос.
-    // Вернее, ничего не разломается, но пользователь может получить ответ что такой пользователь уже есть.
-    // В принципе это не очень плохо, можно пока забить.
+async fn signup(Json(input_payload): Json<SignupRequest>) -> Response {
     send_requests_with_timeouts(&SIGNUP_EP, HeaderMap::new(), &input_payload, "Auth").await
 }
 
-async fn login(
-    Json(input_payload): Json<LoginRequest>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
     send_requests_with_timeouts(&LOGIN_EP, HeaderMap::new(), &input_payload, "Auth").await
 }
 
-async fn logout(headers: HeaderMap) -> Result<impl IntoResponse, impl IntoResponse> {
+async fn logout(headers: HeaderMap) -> Response {
     send_requests_with_timeouts(&LOGOUT_EP, headers, &EmptyRequest {}, "Auth").await
 }
 
@@ -158,7 +134,7 @@ async fn send_one_request<InputJsonType: Serialize>(
     headers: HeaderMap,
     input_payload: &InputJsonType,
     service_name: &str,
-) -> Result<reqwest::Response, impl IntoResponse> {
+) -> Result<reqwest::Response, axum::response::Response> {
     let client = reqwest::Client::new();
 
     let timeout_result = timeout(
@@ -184,9 +160,7 @@ async fn send_one_request<InputJsonType: Serialize>(
     }
 }
 
-async fn delete_account(
-    Json(input_payload): Json<DeleteAccountRequest>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
+async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Response {
     // TODO send to all other services:
     // 0) respond to user immediately, all next requests do in separate threads
     // 1) auth service (delete line with user from db there)
@@ -211,15 +185,16 @@ async fn delete_account(
                 let resp_status = response.status();
                 let resp_headers = response.headers().clone();
                 let resp_body = response.bytes().await.unwrap_or_default();
-                return Ok((resp_status, resp_headers, resp_body).into_response());
+                return (resp_status, resp_headers, resp_body).into_response();
             }
         }
         Err(err) => {
-            return Err(err);
+            return err;
         }
     };
 
-    let tracks_resp = send_one_request(
+    // TODO этот запрос слать уже в другом треде, пользователю ответить сразу
+    send_requests_with_timeouts(
         &DELETE_ACCOUNT_EP_TRACKS,
         HeaderMap::new(),
         &input_payload,
@@ -227,13 +202,5 @@ async fn delete_account(
     )
     .await;
 
-    match tracks_resp {
-        Ok(response) => {
-            let resp_status = response.status();
-            let resp_headers = response.headers().clone();
-            let resp_body = response.bytes().await.unwrap_or_default();
-            Ok((resp_status, resp_headers, resp_body).into_response())
-        }
-        Err(err) => Err(err),
-    }
+    return (StatusCode::OK).into_response();
 }
