@@ -108,6 +108,7 @@ struct SearchParams {
 
 async fn send_requests_with_timeouts<ParamsType: Serialize, InputJsonType: Serialize>(
     url: &str,
+    method: &reqwest::Method,
     params: ParamsType,
     headers: HeaderMap,
     input_payload: &InputJsonType,
@@ -126,7 +127,7 @@ async fn send_requests_with_timeouts<ParamsType: Serialize, InputJsonType: Seria
         let timeout_result = timeout(
             *duration,
             client
-                .post(url)
+                .request(method.clone(), url)
                 .query(&params)
                 .json(input_payload)
                 .headers(headers.clone())
@@ -159,6 +160,7 @@ async fn send_requests_with_timeouts<ParamsType: Serialize, InputJsonType: Seria
 
 async fn send_requests_with_timeouts_reqwest<ParamsType: Serialize, InputJsonType: Serialize>(
     url: &str,
+    method: &reqwest::Method,
     params: ParamsType,
     headers: HeaderMap,
     input_payload: &InputJsonType,
@@ -176,7 +178,7 @@ async fn send_requests_with_timeouts_reqwest<ParamsType: Serialize, InputJsonTyp
         let timeout_result = timeout(
             *duration,
             client
-                .post(url)
+                .request(method.clone(), url)
                 .query(&params)
                 .json(input_payload)
                 .headers(headers.clone())
@@ -201,19 +203,44 @@ async fn send_requests_with_timeouts_reqwest<ParamsType: Serialize, InputJsonTyp
 }
 
 async fn signup(Json(input_payload): Json<SignupRequest>) -> Response {
-    send_requests_with_timeouts(&SIGNUP_EP, {}, HeaderMap::new(), &input_payload, "Auth").await
+    send_requests_with_timeouts(
+        &SIGNUP_EP,
+        &reqwest::Method::POST,
+        {},
+        HeaderMap::new(),
+        &input_payload,
+        "Auth",
+    )
+    .await
 }
 
 async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
-    send_requests_with_timeouts(&LOGIN_EP, {}, HeaderMap::new(), &input_payload, "Auth").await
+    send_requests_with_timeouts(
+        &LOGIN_EP,
+        &reqwest::Method::POST,
+        {},
+        HeaderMap::new(),
+        &input_payload,
+        "Auth",
+    )
+    .await
 }
 
 async fn logout(headers: HeaderMap) -> Response {
-    send_requests_with_timeouts(&LOGOUT_EP, {}, headers, &EmptyRequest {}, "Auth").await
+    send_requests_with_timeouts(
+        &LOGOUT_EP,
+        &reqwest::Method::POST,
+        {},
+        headers,
+        &EmptyRequest {},
+        "Auth",
+    )
+    .await
 }
 
 async fn send_one_request<InputJsonType: Serialize>(
     url: &str,
+    method: &reqwest::Method,
     headers: HeaderMap,
     input_payload: &InputJsonType,
     service_name: &str,
@@ -223,7 +250,7 @@ async fn send_one_request<InputJsonType: Serialize>(
     let timeout_result = timeout(
         Duration::from_secs(10),
         client
-            .post(url)
+            .request(method.clone(), url)
             .json(input_payload)
             .headers(headers.clone())
             .send(),
@@ -256,6 +283,7 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
 
     let auth_resp = send_one_request(
         &DELETE_ACCOUNT_EP_AUTH,
+        &reqwest::Method::DELETE,
         HeaderMap::new(),
         &input_payload,
         "Auth",
@@ -279,6 +307,7 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
     // TODO этот запрос слать уже в другом треде, пользователю ответить сразу
     send_requests_with_timeouts(
         &DELETE_ACCOUNT_EP_TRACKS,
+        &reqwest::Method::DELETE,
         {},
         HeaderMap::new(),
         &input_payload,
@@ -290,21 +319,41 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
 }
 
 async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response {
-    let auth_resp =
-        send_requests_with_timeouts_reqwest(&CHECK_TOKEN_EP, {}, headers, &EmptyRequest {}).await;
+    let auth_resp = send_requests_with_timeouts_reqwest(
+        &CHECK_TOKEN_EP,
+        &reqwest::Method::GET,
+        {},
+        headers,
+        &EmptyRequest {},
+    )
+    .await;
     let auth_resp = match auth_resp {
         Ok(resp) => resp,
         Err(staus_code) => {
             return staus_code.into_response();
         }
     };
+    println!("{}", auth_resp.status());
     let body = match auth_resp.bytes().await {
         Ok(bytes) => bytes,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    let check_token_response: CheckTokenResponse = serde_json::from_slice(&body).unwrap();
+    println!("{}", body.len());
+    println!("{}", &String::from_utf8(body.to_vec()).unwrap());
+    let check_token_response: Result<CheckTokenResponse, _> = serde_json::from_slice(&body);
+    let check_token_response = match check_token_response {
+        Ok(resp) => resp,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "check_token response is in incorrect format",
+            )
+                .into_response();
+        }
+    };
+
     let username = check_token_response.username;
 
     ////
@@ -332,10 +381,11 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
     form = form.part("json", part);
 
     ////
+    println!("form built");
 
     let client = reqwest::Client::new();
     let response = client
-        .post("http://localhost:3002")
+        .post(UPLOAD_TRACK_EP.as_str())
         .multipart(form)
         .send()
         .await;
@@ -354,8 +404,16 @@ async fn delete_track(
     headers: HeaderMap,
     Json(input_payload): Json<DeleteTrackRequest>,
 ) -> Response {
-    let auth_resp =
-        send_requests_with_timeouts_reqwest(&CHECK_TOKEN_EP, {}, headers, &EmptyRequest {}).await;
+    println!("1");
+    let auth_resp = send_requests_with_timeouts_reqwest(
+        &CHECK_TOKEN_EP,
+        &reqwest::Method::GET,
+        {},
+        headers,
+        &EmptyRequest {},
+    )
+    .await;
+    println!("2");
     let auth_resp = match auth_resp {
         Ok(resp) => resp,
         Err(staus_code) => {
@@ -368,6 +426,7 @@ async fn delete_track(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
+    println!("3");
     let check_token_response: CheckTokenResponse = serde_json::from_slice(&body).unwrap();
     let username = check_token_response.username;
 
@@ -376,9 +435,11 @@ async fn delete_track(
         username,
         track_id: input_payload.track_id,
     };
+    println!("4");
 
     send_requests_with_timeouts(
         &DELETE_TRACK_EP,
+        &reqwest::Method::DELETE,
         {},
         HeaderMap::new(),
         &middle_request,
@@ -390,6 +451,7 @@ async fn delete_track(
 async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
     send_requests_with_timeouts(
         &DOWNLOAD_TRACK_EP,
+        &reqwest::Method::GET,
         params,
         HeaderMap::new(),
         &EmptyRequest {},
@@ -401,6 +463,7 @@ async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
 async fn search(Query(params): Query<SearchParams>) -> Response {
     send_requests_with_timeouts(
         &SEARCH_EP,
+        &reqwest::Method::POST,
         params,
         HeaderMap::new(),
         &EmptyRequest {},

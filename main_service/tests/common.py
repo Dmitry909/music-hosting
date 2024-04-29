@@ -25,10 +25,10 @@ def logout(token: str):
 def delete_account(username: str, password: str):
     json_data = {"username": username, "password": password}
     response = requests.delete(f'{host}/delete_account', json=json_data)
-    assert(response.status_code == 200)
+    return response
 
 
-def upload_track(username: str, track_name: str, file_path: str):
+def upload_track(token: str, username: str, track_name: str, file_path: str):
     json_data = {"username": username, "track_name": track_name}
 
     with open(file_path, 'rb') as f:
@@ -37,7 +37,7 @@ def upload_track(username: str, track_name: str, file_path: str):
             'json': (None, json.dumps(json_data), 'application/json')
         }
 
-        response = requests.post(f'{host}/upload_track', files=files)
+        response = requests.post(f'{host}/upload_track', headers={"Authorization": token}, files=files)
 
     assert (response.status_code == 201)
     obj = json.loads(response.text)
@@ -49,9 +49,9 @@ def upload_track(username: str, track_name: str, file_path: str):
     return id
 
 
-def delete_track(username: str, track_id: int):
+def delete_track(token: str, username: str, track_id: int):
     json_data = {"username": username, "track_id": track_id}
-    response = requests.delete(f'{host}/delete_track', json=json_data)
+    response = requests.delete(f'{host}/delete_track', headers={"Authorization": token}, json=json_data)
     return response
 
 
