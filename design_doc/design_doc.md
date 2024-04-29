@@ -92,7 +92,7 @@ body: { "username": "...", "password": "..." }
 ```
 POST /upload_track
 Authorization: jwt_token=...
-body: { "file": "file-content" }
+body: { "file": "file-content", "track_name": "..." }
 ```
 Статусы ответа:
 - 200 если трек принят к загрузке. В body ответа будет лежать id трека.

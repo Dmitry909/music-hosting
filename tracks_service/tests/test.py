@@ -99,3 +99,5 @@ test_upload_delete_track_and_account()
 test_upload_and_download()
 test_search()
 test_change_rate()
+
+# TODO добавить тест на upload трека с существующим именем
