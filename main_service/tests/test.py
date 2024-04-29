@@ -82,7 +82,10 @@ def test_upload_delete_account():
     assert(delete_account_resp.status_code == 200)
 
     download_resp = download_track(track_id)
-    assert(download_resp.status_code == 404)    
+    assert(download_resp.status_code == 404)
+
+    login_resp = login(account, password)
+    assert(login_resp.status_code == 404)
 
     print('test_upload_delete_account OK')
 

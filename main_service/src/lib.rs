@@ -333,15 +333,12 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
             return staus_code.into_response();
         }
     };
-    println!("{}", auth_resp.status());
     let body = match auth_resp.bytes().await {
         Ok(bytes) => bytes,
         Err(_) => {
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("{}", body.len());
-    println!("{}", &String::from_utf8(body.to_vec()).unwrap());
     let check_token_response: Result<CheckTokenResponse, _> = serde_json::from_slice(&body);
     let check_token_response = match check_token_response {
         Ok(resp) => resp,
@@ -381,7 +378,6 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
     form = form.part("json", part);
 
     ////
-    println!("form built");
 
     let client = reqwest::Client::new();
     let response = client
@@ -404,7 +400,6 @@ async fn delete_track(
     headers: HeaderMap,
     Json(input_payload): Json<DeleteTrackRequest>,
 ) -> Response {
-    println!("1");
     let auth_resp = send_requests_with_timeouts_reqwest(
         &CHECK_TOKEN_EP,
         &reqwest::Method::GET,
@@ -413,7 +408,6 @@ async fn delete_track(
         &EmptyRequest {},
     )
     .await;
-    println!("2");
     let auth_resp = match auth_resp {
         Ok(resp) => resp,
         Err(staus_code) => {
@@ -426,7 +420,6 @@ async fn delete_track(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
-    println!("3");
     let check_token_response: CheckTokenResponse = serde_json::from_slice(&body).unwrap();
     let username = check_token_response.username;
 
@@ -435,7 +428,6 @@ async fn delete_track(
         username,
         track_id: input_payload.track_id,
     };
-    println!("4");
 
     send_requests_with_timeouts(
         &DELETE_TRACK_EP,
