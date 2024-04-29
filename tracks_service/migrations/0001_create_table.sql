@@ -3,7 +3,8 @@ CREATE TABLE tracks (
     author_username varchar NOT NULL,
     name varchar NOT NULL,
     cnt_rates bigint NOT NULL,
-    sum_rates bigint NOT NULL
+    sum_rates bigint NOT NULL,
+    UNIQUE (author_username, name)
 );
 
 -- TODO для комментов отдельную таблицу, но пока без комментов.

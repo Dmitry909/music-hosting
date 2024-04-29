@@ -15,7 +15,7 @@ def delete_account(username: str, username_ids: list):
         assert (not os.path.exists(f'../tracks/{id}.mp3'))
 
 
-def upload_track(username: str, track_name: str, file_path: str):
+def upload_track_raw(username: str, track_name: str, file_path: str):
     json_data = {
         "username": username,
         "track_name": track_name
@@ -29,7 +29,11 @@ def upload_track(username: str, track_name: str, file_path: str):
 
         response = requests.post(
             'http://localhost:3001/upload_track', files=files)
+    return response
 
+
+def upload_track(username: str, track_name: str, file_path: str):
+    response = upload_track_raw(username, track_name, file_path)
     assert (response.status_code == 201)
     obj = json.loads(response.text)
     assert ('id' in obj)

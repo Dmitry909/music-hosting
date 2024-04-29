@@ -17,6 +17,19 @@ def test_upload_track_and_delete_account():
     print('test_upload_track_and_delete_account success')
 
 
+def test_upload_the_same_second_time():
+    account = random_str(10)
+    track_name = random_str(10)
+    file_path = 'test_tracks/a.mp3'
+    id_a = upload_track(account, track_name, file_path)
+    second_response = upload_track_raw(account, track_name, file_path)
+    assert (second_response.status_code == 500)
+    # TODO добавить обработку добавления трека с тем же именем в коде сервера, возвращать 4xx код, на строке выше поменять
+
+    delete_account(account, [id_a])
+    print('test_upload_the_same_second_time success')
+
+
 def test_upload_delete_track_and_account():
     account = random_str(10)
     id_a = upload_track(account, random_str(10), 'test_tracks/a.mp3')
@@ -95,6 +108,7 @@ def test_change_rate():
 
 
 test_upload_track_and_delete_account()
+test_upload_the_same_second_time()
 test_upload_delete_track_and_account()
 test_upload_and_download()
 test_search()
