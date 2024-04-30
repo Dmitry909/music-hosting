@@ -41,6 +41,7 @@ pub async fn create_app() -> Router {
         .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
         .route("/logout", post(logout))
+        .route("/check_token", get(check_token))
         //
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
@@ -230,6 +231,18 @@ async fn logout(headers: HeaderMap) -> Response {
     send_requests_with_timeouts(
         &LOGOUT_EP,
         &reqwest::Method::POST,
+        {},
+        headers,
+        &EmptyRequest {},
+        "Auth",
+    )
+    .await
+}
+
+async fn check_token(headers: HeaderMap) -> Response {
+    send_requests_with_timeouts(
+        &CHECK_TOKEN_EP,
+        &reqwest::Method::GET,
         {},
         headers,
         &EmptyRequest {},

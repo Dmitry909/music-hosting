@@ -7,7 +7,7 @@ def random_str(length):
     return ''.join(random.choice(ascii_uppercase + digits) for _ in range(length))
 
 
-def test_signup_login_logout():
+def test_login_logout():
     account = random_str(10)
     password = random_str(10)
 
@@ -21,7 +21,26 @@ def test_signup_login_logout():
     logout_resp = logout(token)
     assert(logout_resp.status_code == 200)
 
+    delete_account(account, password)
+
     print('test_signup_login_logout OK')
+
+
+def test_login_check_token():
+    account = random_str(10)
+    password = random_str(10)
+    signup(account, password)
+    token = login(account, password).headers["Authorization"]
+    
+    check_token_resp1 = check_token(token)
+    assert(check_token_resp1.status_code == 200)
+
+    check_token_resp2 = check_token('fake_token')
+    assert(check_token_resp2.status_code == 401)
+
+    delete_account(account, password)
+
+    print('test_login_check_token OK')
 
 
 def test_upload_download():
@@ -42,6 +61,8 @@ def test_upload_download():
         track_content_real = f.read()
         assert(track_content_got == track_content_real)
     
+    delete_account(account, password)
+
     print('test_upload_download OK')
 
 
@@ -62,6 +83,8 @@ def test_upload_delete():
 
     download_resp = download_track(track_id)
     assert(download_resp.status_code == 404)
+
+    delete_account(account, password)
 
     print('test_upload_delete OK')
 
@@ -90,7 +113,8 @@ def test_upload_delete_account():
     print('test_upload_delete_account OK')
 
 
-test_signup_login_logout()
+test_login_logout()
+test_login_check_token()
 test_upload_download()
 test_upload_delete()
 test_upload_delete_account()

@@ -28,6 +28,11 @@ def delete_account(username: str, password: str):
     return response
 
 
+def check_token(token: str):
+    response = requests.get(f'{host}/check_token', headers={"Authorization": token})
+    return response
+
+
 def upload_track(token: str, username: str, track_name: str, file_path: str):
     json_data = {"username": username, "track_name": track_name}
 
