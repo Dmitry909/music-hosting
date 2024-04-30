@@ -1,11 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'signup_page.dart';
 import 'login_page.dart';
+import 'shared_state.dart';
 
-class MainPage extends StatelessWidget {
+class MainPage extends StatefulWidget {
+  @override
+  _MainPageState createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage> {
+  bool _isTokenValid = false;
+
+  @override
+  void initState() {
+    print('Inside initState');
+    super.initState();
+    print('Calling _checkTokenValidity');
+    _checkTokenValidity();
+  }
+
+  Future<void> _checkTokenValidity() async {
+    print('Called _checkTokenValidity');
+    setState(() {
+      _isTokenValid = false;
+    });
+    print('Called _checkTokenValidity 2');
+    try {
+      print('try');
+      final token = (await getToken()) ?? "";
+      print('token: ');
+      print(token);
+      print('TOKEN FINISH');
+      if (token != "") {
+        final response = await http.get(
+            Uri.parse('http://localhost:3002/check_token'),
+            headers: {'Authorization': token});
+        print(response);
+        if (response.statusCode == 200) {
+          setState(() {
+            _isTokenValid = true;
+          });
+        }
+      }
+    } catch (e) {
+      print("fgh");
+    }
+
+    print(_isTokenValid);
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('Inside build MainWidget');
+    return _isTokenValid
+        ? _buildWelcomePage(context)
+        : _buildLoginSignupPage(context);
+  }
+
+  Widget _buildLoginSignupPage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Main Page'),
@@ -34,6 +88,20 @@ class MainPage extends StatelessWidget {
               child: Text('Sign up'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWelcomePage(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Welcome'),
+      ),
+      body: Center(
+        child: Text(
+          'Hello, !',
+          style: TextStyle(fontSize: 24),
         ),
       ),
     );
