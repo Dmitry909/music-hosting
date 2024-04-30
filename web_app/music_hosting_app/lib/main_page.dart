@@ -12,6 +12,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   bool _isTokenValid = false;
+  String username = "USERNAME INITIAL VALUE";
 
   @override
   void initState() {
@@ -23,6 +24,7 @@ class _MainPageState extends State<MainPage> {
 
   Future<void> _checkTokenValidity() async {
     print('Called _checkTokenValidity');
+    username = await getUsername() ?? "FAILED TO GET USERNAME";
     setState(() {
       _isTokenValid = false;
     });
@@ -100,7 +102,7 @@ class _MainPageState extends State<MainPage> {
       ),
       body: Center(
         child: Text(
-          'Hello, !',
+          'Hello, $username!',
           style: TextStyle(fontSize: 24),
         ),
       ),

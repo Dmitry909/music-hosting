@@ -1,10 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 
 import 'shared_state.dart';
-import 'welcome_page.dart';
+import 'main_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -36,11 +37,13 @@ class _LoginPageState extends State<LoginPage> {
           await storeToken(username, token);
         }
 
-        Navigator.push(
+        // Navigator.pop(context);
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) => WelcomePage(username: username),
+            builder: (context) => MainPage(),
           ),
+          (route) => false,
         );
       } else {
         final errorText = response.body;
