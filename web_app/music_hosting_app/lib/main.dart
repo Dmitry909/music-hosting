@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(MusicHostingApp());
@@ -57,6 +58,22 @@ class MainPage extends StatelessWidget {
   }
 }
 
+Future<void> storeToken(String username, String token) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setString('username', username);
+  await prefs.setString('authToken', token);
+}
+
+Future<String?> getUsername() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getString('username');
+}
+
+Future<String?> getToken() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  return prefs.getString('authToken');
+}
+
 class LoginPage extends StatefulWidget {
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -82,6 +99,12 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.statusCode == 200) {
+        print(response.headers);
+        String? token = response.headers['authorization'];
+        if (token != null) {
+          await storeToken(username, token);
+        }
+
         Navigator.push(
           context,
           MaterialPageRoute(
