@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -73,13 +75,13 @@ class _LoginPageState extends State<LoginPage> {
       final response = await http.post(
         Uri.parse('http://localhost:3002/login'),
         headers: {'Content-Type': 'application/json'},
-        // body: json.encode({
-        //   'username': username,
-        //   'password': password,
-        // }),
+        body: json.encode({
+          'username': username,
+          'password': password,
+        }),
       );
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.statusCode == 200) {
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -169,30 +171,33 @@ class _SignupPageState extends State<SignupPage> {
   String _signupResult = '';
 
   Future<void> _signup() async {
-    String username = _usernameController.text;
-    String password = _passwordController.text;
+    final String username = _usernameController.text;
+    final String password = _passwordController.text;
+
+    final Map<String, String> body = {
+      'username': username,
+      'password': password,
+    };
 
     try {
       final response = await http.post(
         Uri.parse('http://localhost:3002/signup'),
-        body: {
-          'username': username,
-          'password': password,
-        },
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
       );
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.statusCode == 201) {
         setState(() {
           _signupResult = 'You were registered';
         });
       } else {
         setState(() {
-          _signupResult = 'Error';
+          _signupResult = 'Signup failed. Please try again.';
         });
       }
-    } catch (error) {
+    } catch (e) {
       setState(() {
-        _signupResult = 'Error';
+        _signupResult = 'Error occurred. Please try again.';
       });
     }
   }
