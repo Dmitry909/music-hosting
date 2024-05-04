@@ -118,6 +118,18 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Main page'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10.0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: _logout,
+                child: Text('Log out'),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -126,10 +138,6 @@ class _MainPageState extends State<MainPage> {
             Text(
               'Hello, $username!',
               style: TextStyle(fontSize: 24),
-            ),
-            ElevatedButton(
-              onPressed: _logout,
-              child: Text('Log out'),
             ),
           ],
         ),
