@@ -37,7 +37,6 @@ class _LoginPageState extends State<LoginPage> {
           await storeToken(username, token);
         }
 
-        // Navigator.pop(context);
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(

@@ -53,6 +53,25 @@ class _MainPageState extends State<MainPage> {
     print(_isTokenValid);
   }
 
+  Future<void> _logout() async {
+    // TODO
+    final token = (await getToken())!;
+    storeToken(username, "");
+
+    final response = await http.post(
+      Uri.parse('http://localhost:3002/logout'),
+      headers: {'authorization': token},
+    );
+
+    print(response);
+
+    Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainPage(),
+        ));
+  }
+
   @override
   Widget build(BuildContext context) {
     print('Inside build MainWidget');
@@ -98,12 +117,21 @@ class _MainPageState extends State<MainPage> {
   Widget _buildWelcomePage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Welcome'),
+        title: Text('Main page'),
       ),
       body: Center(
-        child: Text(
-          'Hello, $username!',
-          style: TextStyle(fontSize: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Hello, $username!',
+              style: TextStyle(fontSize: 24),
+            ),
+            ElevatedButton(
+              onPressed: _logout,
+              child: Text('Log out'),
+            ),
+          ],
         ),
       ),
     );
