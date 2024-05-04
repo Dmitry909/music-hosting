@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:file_picker/file_picker.dart';
 
 import 'signup_page.dart';
 import 'login_page.dart';
@@ -16,7 +17,9 @@ class _MainPageState extends State<MainPage> {
   bool _isTokenValid = false;
   String username = "USERNAME INITIAL VALUE";
   TextEditingController _trackNameController = TextEditingController();
+  String _selectFileStatus = 'File not selected';
   String _uploadTrackResult = '';
+  late PlatformFile selectedFile;
 
   @override
   void initState() {
@@ -109,6 +112,17 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  Future<void> _selectFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+    if (result != null) {
+      selectedFile = result.files.first;
+      setState(() {
+        _selectFileStatus = 'Selected file: ${selectedFile.name}';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     print('Inside build MainWidget');
@@ -180,12 +194,28 @@ class _MainPageState extends State<MainPage> {
             ),
             SizedBox(height: 16),
             ElevatedButton(
+              onPressed: _selectFile,
+              child: Text('Select File'),
+            ),
+            Text(
+              _selectFileStatus,
+              style: TextStyle(
+                color: _selectFileStatus == 'File not selected'
+                    ? Colors.red
+                    : Colors.green,
+              ),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
               onPressed: _uploadTrack,
               child: Text('Upload track'),
             ),
             Text(
               _uploadTrackResult,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(
+                  color: _uploadTrackResult == 'Track uploaded'
+                      ? Colors.green
+                      : Colors.red,),
             ),
           ],
         ),
