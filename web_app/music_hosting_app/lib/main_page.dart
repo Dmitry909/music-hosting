@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,6 +15,8 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool _isTokenValid = false;
   String username = "USERNAME INITIAL VALUE";
+  TextEditingController _trackNameController = TextEditingController();
+  String _uploadTrackResult = '';
 
   @override
   void initState() {
@@ -54,7 +58,6 @@ class _MainPageState extends State<MainPage> {
   }
 
   Future<void> _logout() async {
-    // TODO
     final token = (await getToken())!;
     storeToken(username, "");
 
@@ -70,6 +73,40 @@ class _MainPageState extends State<MainPage> {
         MaterialPageRoute(
           builder: (context) => MainPage(),
         ));
+  }
+
+  Future<void> _uploadTrack() async {
+    String trackName = _trackNameController.text;
+
+    // TODO
+    final Map<String, String> body = {
+      'track_name': trackName,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:3002/upload_track'),
+        headers: {'Content-Type': 'application/json'}, // TODO
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201) {
+        setState(() {
+          _uploadTrackResult = 'Track uploaded';
+        });
+      } else {
+        final statusCode = response.statusCode;
+        final body = response.body;
+        setState(() {
+          _uploadTrackResult =
+              'Upload failed. response status code: $statusCode, body: $body';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _uploadTrackResult = 'Error occurred. Please try again.';
+      });
+    }
   }
 
   @override
@@ -117,7 +154,7 @@ class _MainPageState extends State<MainPage> {
   Widget _buildWelcomePage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Main page'),
+        title: Text('Hello, $username!'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10.0),
@@ -135,9 +172,20 @@ class _MainPageState extends State<MainPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            TextField(
+              controller: _trackNameController,
+              decoration: InputDecoration(
+                labelText: 'Track name',
+              ),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _uploadTrack,
+              child: Text('Upload track'),
+            ),
             Text(
-              'Hello, $username!',
-              style: TextStyle(fontSize: 24),
+              _uploadTrackResult,
+              style: TextStyle(color: Colors.red),
             ),
           ],
         ),
