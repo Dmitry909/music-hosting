@@ -71,7 +71,7 @@ pub async fn create_app(playlists_db_url: &str, need_to_clear: bool) -> Router {
     Router::new()
         .route("/create_playlist", post(create_playlist))
         .route("/add_to_playlist", put(add_to_playlist))
-        // .route("/get_playlist", get(get_playlist))
+        .route("/get_playlist", get(get_playlist))
         .route("/delete_from_playlist", delete(delete_from_playlist))
         .route("/delete_playlist", delete(delete_playlist))
         .route("/delete_account", delete(delete_account))
@@ -150,23 +150,23 @@ async fn add_to_playlist(
     }
 }
 
-// async fn get_playlist(
-//     State(state): State<Arc<AppState>>,
-//     Json(input_payload): Json<GetPlaylistRequest>,
-// ) -> Response {
-//     let query_result = sqlx::query_as!(
-//         PlaylistsTracksModel,
-//         "SELECT track_id FROM playlists_tracks WHERE playlist_id=$1",
-//         input_payload.playlist_id,
-//     )
-//     .fetch_all(&state.playlists_pool)
-//     .await;
+async fn get_playlist(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<GetPlaylistRequest>,
+) -> Response {
+    let query_result = sqlx::query!(
+        "SELECT track_id FROM playlists_tracks WHERE playlist_id=$1",
+        input_payload.playlist_id,
+    )
+    .fetch_all(&state.playlists_pool)
+    .await;
 
-//     match query_result {
-//         Ok(vec_tracks_ids) => (StatusCode::OK, Json(vec_tracks_ids)).into_response(),
-//         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response(),
-//     }
-// }
+    match query_result {
+        // Ok(vec_tracks_ids) => (StatusCode::OK, Json(vec_tracks_ids)).into_response(),
+        Ok(vec_tracks_ids) => (StatusCode::OK).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response(),
+    }
+}
 
 async fn delete_from_playlist(
     State(state): State<Arc<AppState>>,
