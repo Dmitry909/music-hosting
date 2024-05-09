@@ -5,6 +5,7 @@ import filecmp
 
 host = 'http://localhost:3002'
 
+
 def signup(username: str, password: str):
     json_data = {"username": username, "password": password}
     response = requests.post(f'{host}/signup', json=json_data)
@@ -18,7 +19,8 @@ def login(username: str, password: str):
 
 
 def logout(token: str):
-    response = requests.post(f'{host}/logout', headers={"Authorization": token})
+    response = requests.post(
+        f'{host}/logout', headers={"Authorization": token})
     return response
 
 
@@ -29,20 +31,20 @@ def delete_account(username: str, password: str):
 
 
 def check_token(token: str):
-    response = requests.get(f'{host}/check_token', headers={"Authorization": token})
+    response = requests.get(f'{host}/check_token',
+                            headers={"Authorization": token})
     return response
 
 
-def upload_track(token: str, username: str, track_name: str, file_path: str):
-    json_data = {"username": username, "track_name": track_name}
-
+def upload_track(token: str, track_name: str, file_path: str):
     with open(file_path, 'rb') as f:
         files = {
             'file': (file_path, f, 'audio/mpeg'),
-            'json': (None, json.dumps(json_data), 'application/json')
+            'track_name': (None, track_name, 'application/text')
         }
 
-        response = requests.post(f'{host}/upload_track', headers={"Authorization": token}, files=files)
+        response = requests.post(
+            f'{host}/upload_track', headers={"Authorization": token}, files=files)
 
     assert (response.status_code == 201)
     obj = json.loads(response.text)
@@ -54,9 +56,10 @@ def upload_track(token: str, username: str, track_name: str, file_path: str):
     return id
 
 
-def delete_track(token: str, username: str, track_id: int):
-    json_data = {"username": username, "track_id": track_id}
-    response = requests.delete(f'{host}/delete_track', headers={"Authorization": token}, json=json_data)
+def delete_track(token: str, track_id: int):
+    json_data = {"track_id": track_id}
+    response = requests.delete(
+        f'{host}/delete_track', headers={"Authorization": token}, json=json_data)
     return response
 
 

@@ -12,14 +12,14 @@ def test_login_logout():
     password = random_str(10)
 
     signup_resp = signup(account, password)
-    assert(signup_resp.status_code == 201)
+    assert (signup_resp.status_code == 201)
 
     login_resp = login(account, password)
     token = login_resp.headers["Authorization"]
-    assert(len(token) > 10 and len(token) < 1000)
-    
+    assert (len(token) > 10 and len(token) < 1000)
+
     logout_resp = logout(token)
-    assert(logout_resp.status_code == 200)
+    assert (logout_resp.status_code == 200)
 
     delete_account(account, password)
 
@@ -31,12 +31,12 @@ def test_login_check_token():
     password = random_str(10)
     signup(account, password)
     token = login(account, password).headers["Authorization"]
-    
+
     check_token_resp1 = check_token(token)
-    assert(check_token_resp1.status_code == 200)
+    assert (check_token_resp1.status_code == 200)
 
     check_token_resp2 = check_token('fake_token')
-    assert(check_token_resp2.status_code == 401)
+    assert (check_token_resp2.status_code == 401)
 
     delete_account(account, password)
 
@@ -52,15 +52,15 @@ def test_upload_download():
     signup(account, password)
     login_resp = login(account, password)
     token = login_resp.headers["Authorization"]
-    
-    track_id = upload_track(token, account, track_name, file_path)
+
+    track_id = upload_track(token, track_name, file_path)
     download_resp = download_track(track_id)
-    assert(download_resp.status_code == 200)
+    assert (download_resp.status_code == 200)
     track_content_got = download_resp.content
     with open(file_path, 'rb') as f:
         track_content_real = f.read()
-        assert(track_content_got == track_content_real)
-    
+        assert (track_content_got == track_content_real)
+
     delete_account(account, password)
 
     print('test_upload_download OK')
@@ -75,14 +75,14 @@ def test_upload_delete():
     signup(account, password)
     login_resp = login(account, password)
     token = login_resp.headers["Authorization"]
-    
-    track_id = upload_track(token, account, track_name, file_path)
 
-    delete_track_resp = delete_track(token, account, track_id)
-    assert(delete_track_resp.status_code == 200)
+    track_id = upload_track(token, track_name, file_path)
+
+    delete_track_resp = delete_track(token, track_id)
+    assert (delete_track_resp.status_code == 200)
 
     download_resp = download_track(track_id)
-    assert(download_resp.status_code == 404)
+    assert (download_resp.status_code == 404)
 
     delete_account(account, password)
 
@@ -98,17 +98,17 @@ def test_upload_delete_account():
     signup(account, password)
     login_resp = login(account, password)
     token = login_resp.headers["Authorization"]
-    
-    track_id = upload_track(token, account, track_name, file_path)
+
+    track_id = upload_track(token, track_name, file_path)
 
     delete_account_resp = delete_account(account, password)
-    assert(delete_account_resp.status_code == 200)
+    assert (delete_account_resp.status_code == 200)
 
     download_resp = download_track(track_id)
-    assert(download_resp.status_code == 404)
+    assert (download_resp.status_code == 404)
 
     login_resp = login(account, password)
-    assert(login_resp.status_code == 404)
+    assert (login_resp.status_code == 404)
 
     print('test_upload_delete_account OK')
 

@@ -332,6 +332,8 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
 }
 
 async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response {
+    println!("#############################");
+    println!("upload_track called");
     let auth_resp = send_requests_with_timeouts_reqwest(
         &CHECK_TOKEN_EP,
         &reqwest::Method::GET,
@@ -346,12 +348,18 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
             return staus_code.into_response();
         }
     };
-    let body = match auth_resp.bytes().await {
+    println!("1");
+    let body: Bytes = match auth_resp.bytes().await {
         Ok(bytes) => bytes,
         Err(_) => {
-            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "auth_resp.bytes() failed",
+            )
+                .into_response();
         }
     };
+    println!("2");
     let check_token_response: Result<CheckTokenResponse, _> = serde_json::from_slice(&body);
     let check_token_response = match check_token_response {
         Ok(resp) => resp,
@@ -363,6 +371,8 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
                 .into_response();
         }
     };
+
+    println!("3");
 
     let username = check_token_response.username;
 
@@ -390,6 +400,8 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
     );
     form = form.part("json", part);
 
+    println!("4");
+
     ////
 
     let client = reqwest::Client::new();
@@ -398,6 +410,8 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
         .multipart(form)
         .send()
         .await;
+
+    println!("5");
 
     match response {
         Ok(response) => {
