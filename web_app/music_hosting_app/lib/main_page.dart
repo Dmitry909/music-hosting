@@ -1,8 +1,11 @@
 import 'dart:convert';
+// import 'dart:html';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 
 import 'signup_page.dart';
 import 'login_page.dart';
@@ -19,45 +22,32 @@ class _MainPageState extends State<MainPage> {
   TextEditingController _trackNameController = TextEditingController();
   String _selectFileStatus = 'File not selected';
   String _uploadTrackResult = '';
-  late PlatformFile selectedFile;
+  PlatformFile? _selectedFile;
 
   @override
   void initState() {
-    print('Inside initState');
     super.initState();
-    print('Calling _checkTokenValidity');
     _checkTokenValidity();
   }
 
   Future<void> _checkTokenValidity() async {
-    print('Called _checkTokenValidity');
     username = await getUsername() ?? "FAILED TO GET USERNAME";
     setState(() {
       _isTokenValid = false;
     });
-    print('Called _checkTokenValidity 2');
     try {
-      print('try');
       final token = (await getToken()) ?? "";
-      print('token: ');
-      print(token);
-      print('TOKEN FINISH');
       if (token != "") {
         final response = await http.get(
             Uri.parse('http://localhost:3002/check_token'),
             headers: {'Authorization': token});
-        print(response);
         if (response.statusCode == 200) {
           setState(() {
             _isTokenValid = true;
           });
         }
       }
-    } catch (e) {
-      print("fgh");
-    }
-
-    print(_isTokenValid);
+    } catch (e) {}
   }
 
   Future<void> _logout() async {
@@ -69,8 +59,6 @@ class _MainPageState extends State<MainPage> {
       headers: {'authorization': token},
     );
 
-    print(response);
-
     Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -78,20 +66,53 @@ class _MainPageState extends State<MainPage> {
         ));
   }
 
+  Future<void> _selectFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles();
+    if (result != null) {
+      setState(() {
+        _selectedFile = result.files.single;
+        _selectFileStatus = 'Selected file: ${_selectedFile?.path}';
+      });
+    }
+  }
+
   Future<void> _uploadTrack() async {
     String trackName = _trackNameController.text;
+    if (trackName == "") {
+      setState(() {
+        _uploadTrackResult = "Name not specified";
+      });
+      return;
+    }
+    print("trackName: $trackName");
 
-    // TODO
-    final Map<String, String> body = {
-      'track_name': trackName,
-    };
+    if (_selectedFile == null) {
+      setState(() {
+        _uploadTrackResult = "File not selected";
+      });
+      return;
+    }
+
+    String filename = _selectedFile?.name ?? "";
+    String pathToFile = _selectedFile?.path ?? "";
+    if (pathToFile == "") {
+      return;
+    }
+
+    final formData = FormData.fromMap({
+      "file": await MultipartFile.fromFile(pathToFile, filename: filename),
+      "some_key": "some_value"
+    });
 
     try {
-      final response = await http.post(
-        Uri.parse('http://localhost:3002/upload_track'),
-        headers: {'Content-Type': 'application/json'}, // TODO
-        body: jsonEncode(body),
+      print("sending request");
+      Response response = await Dio().post(
+        'http://localhost:3002/upload_track',
+        data: formData,
+        // TODO add headers with authorization
       );
+      print("called post");
+      print("response.statusCode: $response.statusCode");
 
       if (response.statusCode == 201) {
         setState(() {
@@ -99,33 +120,23 @@ class _MainPageState extends State<MainPage> {
         });
       } else {
         final statusCode = response.statusCode;
-        final body = response.body;
+        // final body = response.body;
+        // setState(() {_uploadTrackResult = 'Upload failed. response status code: $statusCode, body: $body';});
         setState(() {
           _uploadTrackResult =
-              'Upload failed. response status code: $statusCode, body: $body';
+              'Upload failed. response status code: $statusCode';
         });
       }
     } catch (e) {
+      print(e);
       setState(() {
-        _uploadTrackResult = 'Error occurred. Please try again.';
-      });
-    }
-  }
-
-  Future<void> _selectFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles();
-
-    if (result != null) {
-      selectedFile = result.files.first;
-      setState(() {
-        _selectFileStatus = 'Selected file: ${selectedFile.name}';
+        _uploadTrackResult = 'Error occurred: $e. Please try again.';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('Inside build MainWidget');
     return _isTokenValid
         ? _buildWelcomePage(context)
         : _buildLoginSignupPage(context);
@@ -213,9 +224,10 @@ class _MainPageState extends State<MainPage> {
             Text(
               _uploadTrackResult,
               style: TextStyle(
-                  color: _uploadTrackResult == 'Track uploaded'
-                      ? Colors.green
-                      : Colors.red,),
+                color: _uploadTrackResult == 'Track uploaded'
+                    ? Colors.green
+                    : Colors.red,
+              ),
             ),
           ],
         ),
