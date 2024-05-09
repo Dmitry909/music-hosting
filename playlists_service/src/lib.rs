@@ -162,8 +162,16 @@ async fn get_playlist(
     .await;
 
     match query_result {
-        // Ok(vec_tracks_ids) => (StatusCode::OK, Json(vec_tracks_ids)).into_response(),
-        Ok(vec_tracks_ids) => (StatusCode::OK).into_response(),
+        Ok(vec_tracks_ids) => {
+            let tracks: Vec<i64> = vec_tracks_ids
+                .into_iter()
+                .map(|record| match record.track_id {
+                    Some(track_id) => track_id,
+                    None => -1,
+                })
+                .collect();
+            (StatusCode::OK, Json(tracks)).into_response()
+        }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response(),
     }
 }
