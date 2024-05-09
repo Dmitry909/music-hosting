@@ -84,7 +84,6 @@ class _MainPageState extends State<MainPage> {
       });
       return;
     }
-    print("trackName: $trackName");
 
     if (_selectedFile == null) {
       setState(() {
@@ -101,22 +100,23 @@ class _MainPageState extends State<MainPage> {
 
     final formData = FormData.fromMap({
       "file": await MultipartFile.fromFile(pathToFile, filename: filename),
-      "some_key": "some_value"
+      "track_name": trackName
     });
+    final token = (await getToken())!;
+    final headers = {'authorization': token, "Content-Type": "multipart"};
 
     try {
-      print("sending request");
       Response response = await Dio().post(
         'http://localhost:3002/upload_track',
         data: formData,
-        // TODO add headers with authorization
+        options: Options(headers: headers),
       );
-      print("called post");
-      print("response.statusCode: $response.statusCode");
 
       if (response.statusCode == 201) {
         setState(() {
           _uploadTrackResult = 'Track uploaded';
+          _selectFileStatus = 'File not selected';
+          _trackNameController.clear();
         });
       } else {
         final statusCode = response.statusCode;
@@ -128,7 +128,6 @@ class _MainPageState extends State<MainPage> {
         });
       }
     } catch (e) {
-      print(e);
       setState(() {
         _uploadTrackResult = 'Error occurred: $e. Please try again.';
       });
