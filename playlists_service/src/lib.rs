@@ -188,7 +188,6 @@ async fn check_playlist_belongs_user(
     }
 }
 
-// TODO добавить username сюда и в запрос, т.к. иначе проверять принадлежность плейлиста юзеру придется отдельным запросом
 async fn add_to_playlist(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<AddToPlaylistRequest>,
@@ -220,10 +219,41 @@ async fn add_to_playlist(
     }
 }
 
+async fn ensure_playlist_exists(pool: &Pool<Postgres>, playlist_id: i64) -> Option<Response> {
+    let query_result = sqlx::query_as!(
+        PlaylistsModel,
+        "SELECT * FROM playlists WHERE id=$1",
+        playlist_id,
+    )
+    .fetch_optional(pool)
+    .await;
+
+    match query_result {
+        Ok(query_result) => match query_result {
+            Some(_) => None,
+            None => Some(
+                (
+                    StatusCode::NOT_FOUND,
+                    format!("Playlist {} doesn't exist", playlist_id),
+                )
+                    .into_response(),
+            ),
+        },
+        Err(_) => Some((StatusCode::INTERNAL_SERVER_ERROR).into_response()),
+    }
+}
+
 async fn get_playlist(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<GetPlaylistRequest>,
 ) -> Response {
+    let ensure_result =
+        ensure_playlist_exists(&state.playlists_pool, input_payload.playlist_id).await;
+    match ensure_result {
+        Some(response) => return response,
+        None => {}
+    };
+
     let query_result = sqlx::query!(
         "SELECT track_id FROM playlists_tracks WHERE playlist_id=$1",
         input_payload.playlist_id,
@@ -262,9 +292,8 @@ async fn delete_from_playlist(
         None => {}
     };
 
-    let query_result = sqlx::query_as!(
-        PlaylistsTracksModel,
-        "DELETE FROM playlists_tracks WHERE playlist_id=$1 AND track_id=$2",
+    let query_result = sqlx::query!(
+        "DELETE FROM playlists_tracks WHERE playlist_id=$1 AND track_id=$2 RETURNING *",
         input_payload.playlist_id,
         input_payload.track_id,
     )
@@ -302,7 +331,7 @@ async fn delete_playlist(
 
     let query_result = sqlx::query_as!(
         PlaylistsModel,
-        "DELETE FROM playlists WHERE id=$1",
+        "DELETE FROM playlists WHERE id=$1 RETURNING *",
         input_payload.playlist_id,
     )
     .fetch_optional(&state.playlists_pool)
