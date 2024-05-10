@@ -68,6 +68,28 @@ def download_track(track_id: int):
     return response
 
 
+def create_playlist(token: str, name: str):
+    json_data = {'name': name}
+    response = requests.post(
+        f'{host}/create_playlist', headers={"Authorization": token}, json=json_data)
+
+    assert (response.status_code == 201)
+    obj = json.loads(response.text)
+    assert ('id' in obj)
+    assert (isinstance(obj['id'], int))
+    assert (len(obj) == 1)
+    playlist_id = obj['id']
+
+    return playlist_id
+
+
+def delete_playlist(token: str, playlist_id: int):
+    json_data = {'playlist_id': playlist_id}
+    response = requests.delete(
+        f'{host}/delete_playlist', headers={"Authorization": token}, json=json_data)
+    return response
+
+
 def search(query: str):
     response = requests.get(f'{host}/search?query={query}')
 
