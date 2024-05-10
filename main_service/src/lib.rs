@@ -35,13 +35,13 @@ lazy_static! {
     pub static ref DOWNLOAD_TRACK_EP: String = format!("{}/download_track", TRACKS_HOST);
     pub static ref SEARCH_EP_TRACKS: String = format!("{}/search", TRACKS_HOST);
     //
-    pub static ref CREATE_PLAYLIST_EP: String = format!("{}/create_playlist", PLAYLISTS_HOST);
-    pub static ref DELETE_PLAYLIST_EP: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
-    pub static ref ADD_TO_PLAYLIST_EP: String = format!("{}/add_to_playlist", PLAYLISTS_HOST);
-    pub static ref DELETE_FROM_PLAYLIST_EP: String = format!("{}/delete_from_playlist", PLAYLISTS_HOST);
-    pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
-    pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
-    pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
+    // pub static ref CREATE_PLAYLIST_EP: String = format!("{}/create_playlist", PLAYLISTS_HOST);
+    // pub static ref DELETE_PLAYLIST_EP: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
+    // pub static ref ADD_TO_PLAYLIST_EP: String = format!("{}/add_to_playlist", PLAYLISTS_HOST);
+    // pub static ref DELETE_FROM_PLAYLIST_EP: String = format!("{}/delete_from_playlist", PLAYLISTS_HOST);
+    // pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
+    // pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
+    // pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
 }
 
 pub async fn create_app() -> Router {
@@ -376,7 +376,7 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
     return (StatusCode::OK).into_response();
 }
 
-async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response {
+async fn resolve_username_from_token(headers: HeaderMap) -> Result<String, Response> {
     let auth_resp = send_requests_with_timeouts_reqwest(
         &CHECK_TOKEN_EP,
         &reqwest::Method::GET,
@@ -388,32 +388,43 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
     let auth_resp = match auth_resp {
         Ok(resp) => resp,
         Err(staus_code) => {
-            return staus_code.into_response();
+            return Err(staus_code.into_response());
         }
     };
     let body: Bytes = match auth_resp.bytes().await {
         Ok(bytes) => bytes,
         Err(_) => {
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "auth_resp.bytes() failed",
             )
-                .into_response();
+                .into_response());
         }
     };
     let check_token_response: Result<CheckTokenResponse, _> = serde_json::from_slice(&body);
     let check_token_response = match check_token_response {
         Ok(resp) => resp,
         Err(_) => {
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "check_token response is in incorrect format",
             )
-                .into_response();
+                .into_response());
         }
     };
 
     let username = check_token_response.username;
+    Ok(username)
+}
+
+async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response {
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
+        }
+    };
 
     ////
 
@@ -513,6 +524,19 @@ async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
     )
     .await
 }
+
+// async fn create_playlist(
+//     headers: HeaderMap,
+//     Json(input_payload): Json<CreatePlaylistRequest>,
+// ) -> Response {
+
+// }
+
+// create_playlist
+// delete_playlist
+// add_to_playlist
+// delete_from_playlist
+// get_playlist
 
 async fn search(Query(params): Query<SearchParams>) -> Response {
     send_requests_with_timeouts(
