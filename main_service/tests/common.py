@@ -90,6 +90,21 @@ def delete_playlist(token: str, playlist_id: int):
     return response
 
 
+def add_to_playlist(token: str, playlist_id: int, track_id: int):
+    json_data = {'playlist_id': playlist_id, 'track_id': track_id}
+    response = requests.put(f'{host}/add_to_playlist',
+                            headers={"Authorization": token}, json=json_data)
+    assert (response.status_code == 200)
+    return response
+
+
+def get_playlist(playlist_id: int):
+    response = requests.get(f'{host}/get_playlist?playlist_id={playlist_id}')
+    assert (response.status_code == 200)
+    obj = json.loads(response.text)
+    return obj
+
+
 def search(query: str):
     response = requests.get(f'{host}/search?query={query}')
 

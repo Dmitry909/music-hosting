@@ -123,6 +123,11 @@ def test_create_delete_get_playlist():
 
     playlist_id = create_playlist(token, playlist_name)
 
+    add_to_playlist(token, playlist_id, 123)
+
+    tracks = get_playlist(playlist_id)
+    assert (tracks == [123])
+
     delete_playlist_resp = delete_playlist(token, playlist_id)
     assert (delete_playlist_resp.status_code == 200)
 
