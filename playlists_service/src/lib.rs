@@ -103,7 +103,7 @@ struct AddToPlaylistRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GetPlaylistRequest {
+struct GetPlaylistParams {
     playlist_id: i64,
 }
 
@@ -245,10 +245,9 @@ async fn ensure_playlist_exists(pool: &Pool<Postgres>, playlist_id: i64) -> Opti
 
 async fn get_playlist(
     State(state): State<Arc<AppState>>,
-    Json(input_payload): Json<GetPlaylistRequest>,
+    Query(params): Query<GetPlaylistParams>,
 ) -> Response {
-    let ensure_result =
-        ensure_playlist_exists(&state.playlists_pool, input_payload.playlist_id).await;
+    let ensure_result = ensure_playlist_exists(&state.playlists_pool, params.playlist_id).await;
     match ensure_result {
         Some(response) => return response,
         None => {}
@@ -256,7 +255,7 @@ async fn get_playlist(
 
     let query_result = sqlx::query!(
         "SELECT track_id FROM playlists_tracks WHERE playlist_id=$1",
-        input_payload.playlist_id,
+        params.playlist_id,
     )
     .fetch_all(&state.playlists_pool)
     .await;

@@ -30,8 +30,7 @@ def add_to_playlist(username: str, playlist_id: int, track_id: int):
 
 
 def get_playlist(playlist_id: int):
-    json_data = {'playlist_id': playlist_id}
-    response = requests.get(f'{host}/get_playlist', json=json_data)
+    response = requests.get(f'{host}/get_playlist?playlist_id={playlist_id}')
     return response
 
 
