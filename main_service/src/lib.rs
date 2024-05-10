@@ -18,6 +18,7 @@ extern crate lazy_static;
 
 const AUTH_HOST: &str = "http://localhost:3000";
 const TRACKS_HOST: &str = "http://localhost:3001";
+const PLAYLISTS_HOST: &str = "http://localhost:3003";
 
 // EP = ENDPOINT
 lazy_static! {
@@ -26,19 +27,27 @@ lazy_static! {
     pub static ref LOGOUT_EP: String = format!("{}/logout", AUTH_HOST);
     pub static ref DELETE_ACCOUNT_EP_AUTH: String = format!("{}/delete_account", AUTH_HOST);
     pub static ref CHECK_TOKEN_EP: String = format!("{}/check_token", AUTH_HOST);
+    pub static ref SEARCH_EP_AUTH: String = format!("{}/search", AUTH_HOST);
     //
     pub static ref UPLOAD_TRACK_EP: String = format!("{}/upload_track", TRACKS_HOST);
     pub static ref DELETE_ACCOUNT_EP_TRACKS: String = format!("{}/delete_account", TRACKS_HOST);
     pub static ref DELETE_TRACK_EP: String = format!("{}/delete_track", TRACKS_HOST);
     pub static ref DOWNLOAD_TRACK_EP: String = format!("{}/download_track", TRACKS_HOST);
-    pub static ref SEARCH_EP: String = format!("{}/search", TRACKS_HOST);
+    pub static ref SEARCH_EP_TRACKS: String = format!("{}/search", TRACKS_HOST);
+    //
+    pub static ref CREATE_PLAYLIST_EP: String = format!("{}/create_playlist", PLAYLISTS_HOST);
+    pub static ref DELETE_PLAYLIST_EP: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
+    pub static ref ADD_TO_PLAYLIST_EP: String = format!("{}/add_to_playlist", PLAYLISTS_HOST);
+    pub static ref DELETE_FROM_PLAYLIST_EP: String = format!("{}/delete_from_playlist", PLAYLISTS_HOST);
+    pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
+    pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
+    pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
 }
 
 pub async fn create_app() -> Router {
     Router::new()
         // .route("/", get(root_handler))
         .route("/signup", post(signup))
-        .route("/delete_account", delete(delete_account))
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/check_token", get(check_token))
@@ -46,7 +55,16 @@ pub async fn create_app() -> Router {
         .route("/upload_track", post(upload_track))
         .route("/delete_track", delete(delete_track))
         .route("/download_track", get(download_track))
+        //
+        // .route("/create_playlist", post(create_playlist))
+        // .route("/delete_playlist", delete(delete_playlist))
+        // .route("/add_to_playlist", put(add_to_playlist))
+        // .route("/delete_from_playlist", delete(delete_from_playlist))
+        // .route("/get_playlist", get(get_playlist))
+        //
         .route("/search", get(search))
+        //
+        .route("/delete_account", delete(delete_account))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
 }
 
@@ -105,6 +123,33 @@ struct DownloadTrackParams {
 #[derive(Serialize, Deserialize, Debug)]
 struct SearchParams {
     query: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CreatePlaylistRequest {
+    name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DeletePlaylistRequest {
+    playlist_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AddToPlaylistRequest {
+    playlist_id: i64,
+    track_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct DeleteFromPlaylistRequest {
+    playlist_id: i64,
+    track_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GetPlaylistRequest {
+    playlist_id: i64,
 }
 
 async fn send_requests_with_timeouts<ParamsType: Serialize, InputJsonType: Serialize>(
@@ -471,7 +516,7 @@ async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
 
 async fn search(Query(params): Query<SearchParams>) -> Response {
     send_requests_with_timeouts(
-        &SEARCH_EP,
+        &SEARCH_EP_TRACKS,
         &reqwest::Method::POST,
         params,
         HeaderMap::new(),
