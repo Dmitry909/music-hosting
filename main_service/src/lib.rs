@@ -9,7 +9,7 @@ use axum::{
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use reqwest;
 use serde::{Deserialize, Serialize};
-use std::str;
+use std::{any::Any, str};
 use tokio::time::timeout;
 use tokio::time::Duration;
 
@@ -58,9 +58,9 @@ pub async fn create_app() -> Router {
         //
         .route("/create_playlist", post(create_playlist))
         .route("/delete_playlist", delete(delete_playlist))
-        // .route("/add_to_playlist", put(add_to_playlist))
-        // .route("/delete_from_playlist", delete(delete_from_playlist))
-        // .route("/get_playlist", get(get_playlist))
+        .route("/add_to_playlist", put(add_to_playlist))
+        .route("/delete_from_playlist", delete(delete_from_playlist))
+        .route("/get_playlist", get(get_playlist))
         //
         .route("/search", get(search))
         //
@@ -167,7 +167,14 @@ struct DeleteFromPlaylistRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GetPlaylistRequest {
+struct DeleteFromPlaylistMiddleRequest {
+    username: String,
+    playlist_id: i64,
+    track_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GetPlaylistParams {
     playlist_id: i64,
 }
 
@@ -586,9 +593,75 @@ async fn delete_playlist(
     .await
 }
 
-// add_to_playlist
-// delete_from_playlist
-// get_playlist
+async fn add_to_playlist(
+    headers: HeaderMap,
+    Json(input_payload): Json<AddToPlaylistRequest>,
+) -> Response {
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
+        }
+    };
+
+    let middle_request = AddToPlaylistMiddleRequest {
+        username,
+        playlist_id: input_payload.playlist_id,
+        track_id: input_payload.track_id,
+    };
+
+    send_requests_with_timeouts(
+        &ADD_TO_PLAYLIST_EP,
+        &reqwest::Method::PUT,
+        {},
+        HeaderMap::new(),
+        &middle_request,
+        "Playlists",
+    )
+    .await
+}
+
+async fn delete_from_playlist(
+    headers: HeaderMap,
+    Json(input_payload): Json<DeleteFromPlaylistRequest>,
+) -> Response {
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
+        }
+    };
+
+    let middle_request = DeleteFromPlaylistMiddleRequest {
+        username,
+        playlist_id: input_payload.playlist_id,
+        track_id: input_payload.track_id,
+    };
+
+    send_requests_with_timeouts(
+        &DELETE_FROM_PLAYLIST_EP,
+        &reqwest::Method::DELETE,
+        {},
+        HeaderMap::new(),
+        &middle_request,
+        "Playlists",
+    )
+    .await
+}
+
+async fn get_playlist(Query(params): Query<GetPlaylistParams>) -> Response {
+    send_requests_with_timeouts(
+        &GET_PLAYLIST_EP,
+        &reqwest::Method::GET,
+        params,
+        HeaderMap::new(),
+        &EmptyRequest {},
+        "Playlists",
+    )
+    .await
+}
 
 async fn search(Query(params): Query<SearchParams>) -> Response {
     send_requests_with_timeouts(
