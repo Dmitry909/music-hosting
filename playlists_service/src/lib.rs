@@ -47,6 +47,11 @@ pub struct PlaylistsModel {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct PlaylistsModelOnlyUsername {
+    pub owner_username: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct PlaylistsTracksModel {
     pub id: i64,
     pub playlist_id: i64,
@@ -87,6 +92,7 @@ struct CreatePlaylistRequest {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct AddToPlaylistRequest {
+    username: String,
     playlist_id: i64,
     track_id: i64,
 }
@@ -98,12 +104,14 @@ struct GetPlaylistRequest {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DeleteFromPlaylistRequest {
+    username: String,
     playlist_id: i64,
     track_id: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct DeletePlaylistRequest {
+    username: String,
     playlist_id: i64,
 }
 
@@ -131,10 +139,62 @@ async fn create_playlist(
     }
 }
 
+async fn check_playlist_belongs_user(
+    pool: &Pool<Postgres>,
+    username: String,
+    playlist_id: i64,
+) -> Option<Response> {
+    let query_result = sqlx::query_as!(
+        PlaylistsModelOnlyUsername,
+        "SELECT owner_username FROM playlists WHERE id=$1",
+        playlist_id
+    )
+    .fetch_optional(pool)
+    .await;
+
+    match query_result {
+        Ok(query_result) => match query_result {
+            None => Some(
+                (
+                    StatusCode::NOT_FOUND,
+                    format!("Playlist {} doesn't exist", playlist_id),
+                )
+                    .into_response(),
+            ),
+            Some(result) => {
+                if result.owner_username == username {
+                    return None;
+                }
+                return Some(
+                    (
+                        StatusCode::FORBIDDEN,
+                        format!("You are not allowed to modify playlist {}", playlist_id),
+                    )
+                        .into_response(),
+                );
+            }
+        },
+        Err(_) => Some((StatusCode::INTERNAL_SERVER_ERROR).into_response()),
+    }
+}
+
+// TODO добавить username сюда и в запрос, т.к. иначе проверять принадлежность плейлиста юзеру придется отдельным запросом
 async fn add_to_playlist(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<AddToPlaylistRequest>,
 ) -> Response {
+    let belongs = check_playlist_belongs_user(
+        &state.playlists_pool,
+        input_payload.username,
+        input_payload.playlist_id,
+    )
+    .await;
+
+    match belongs {
+        Some(err_response) => return err_response,
+        None => {}
+    };
+
     let query_result = sqlx::query_as!(
         PlaylistsTracksModel,
         "INSERT INTO playlists_tracks (playlist_id, track_id) VALUES ($1, $2)",
@@ -180,6 +240,18 @@ async fn delete_from_playlist(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<DeleteFromPlaylistRequest>,
 ) -> Response {
+    let belongs = check_playlist_belongs_user(
+        &state.playlists_pool,
+        input_payload.username,
+        input_payload.playlist_id,
+    )
+    .await;
+
+    match belongs {
+        Some(err_response) => return err_response,
+        None => {}
+    };
+
     let query_result = sqlx::query_as!(
         PlaylistsTracksModel,
         "DELETE FROM playlists_tracks WHERE playlist_id=$1 AND track_id=$2",
@@ -206,6 +278,18 @@ async fn delete_playlist(
     State(state): State<Arc<AppState>>,
     Json(input_payload): Json<DeletePlaylistRequest>,
 ) -> Response {
+    let belongs = check_playlist_belongs_user(
+        &state.playlists_pool,
+        input_payload.username,
+        input_payload.playlist_id,
+    )
+    .await;
+
+    match belongs {
+        Some(err_response) => return err_response,
+        None => {}
+    };
+
     let query_result = sqlx::query_as!(
         PlaylistsModel,
         "DELETE FROM playlists WHERE id=$1",
