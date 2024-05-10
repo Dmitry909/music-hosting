@@ -91,6 +91,11 @@ struct CreatePlaylistRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct CreatePlaylistResponse {
+    id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct AddToPlaylistRequest {
     username: String,
     playlist_id: i64,
@@ -126,15 +131,20 @@ async fn create_playlist(
 ) -> Response {
     let query_result = sqlx::query_as!(
         PlaylistsModel,
-        "INSERT INTO playlists (owner_username, name) VALUES ($1, $2)",
+        "INSERT INTO playlists (owner_username, name) VALUES ($1, $2) RETURNING *",
         input_payload.username,
         input_payload.name,
     )
-    .execute(&state.playlists_pool)
+    .fetch_one(&state.playlists_pool)
     .await;
 
     match query_result {
-        Ok(_) => (StatusCode::OK).into_response(),
+        Ok(query_result) => {
+            let response = CreatePlaylistResponse {
+                id: query_result.id,
+            };
+            (StatusCode::CREATED, Json(response)).into_response()
+        }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 }
