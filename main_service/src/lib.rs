@@ -35,13 +35,13 @@ lazy_static! {
     pub static ref DOWNLOAD_TRACK_EP: String = format!("{}/download_track", TRACKS_HOST);
     pub static ref SEARCH_EP_TRACKS: String = format!("{}/search", TRACKS_HOST);
     //
-    // pub static ref CREATE_PLAYLIST_EP: String = format!("{}/create_playlist", PLAYLISTS_HOST);
-    // pub static ref DELETE_PLAYLIST_EP: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
-    // pub static ref ADD_TO_PLAYLIST_EP: String = format!("{}/add_to_playlist", PLAYLISTS_HOST);
-    // pub static ref DELETE_FROM_PLAYLIST_EP: String = format!("{}/delete_from_playlist", PLAYLISTS_HOST);
-    // pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
-    // pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
-    // pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
+    pub static ref CREATE_PLAYLIST_EP: String = format!("{}/create_playlist", PLAYLISTS_HOST);
+    pub static ref DELETE_PLAYLIST_EP: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
+    pub static ref ADD_TO_PLAYLIST_EP: String = format!("{}/add_to_playlist", PLAYLISTS_HOST);
+    pub static ref DELETE_FROM_PLAYLIST_EP: String = format!("{}/delete_from_playlist", PLAYLISTS_HOST);
+    pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
+    pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
+    pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
 }
 
 pub async fn create_app() -> Router {
@@ -56,8 +56,8 @@ pub async fn create_app() -> Router {
         .route("/delete_track", delete(delete_track))
         .route("/download_track", get(download_track))
         //
-        // .route("/create_playlist", post(create_playlist))
-        // .route("/delete_playlist", delete(delete_playlist))
+        .route("/create_playlist", post(create_playlist))
+        .route("/delete_playlist", delete(delete_playlist))
         // .route("/add_to_playlist", put(add_to_playlist))
         // .route("/delete_from_playlist", delete(delete_from_playlist))
         // .route("/get_playlist", get(get_playlist))
@@ -131,12 +131,31 @@ struct CreatePlaylistRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct CreatePlaylistMiddleRequest {
+    username: String,
+    name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct DeletePlaylistRequest {
     playlist_id: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+struct DeletePlaylistMiddleRequest {
+    username: String,
+    playlist_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct AddToPlaylistRequest {
+    playlist_id: i64,
+    track_id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AddToPlaylistMiddleRequest {
+    username: String,
     playlist_id: i64,
     track_id: i64,
 }
@@ -473,30 +492,16 @@ async fn delete_track(
     headers: HeaderMap,
     Json(input_payload): Json<DeleteTrackRequest>,
 ) -> Response {
-    let auth_resp = send_requests_with_timeouts_reqwest(
-        &CHECK_TOKEN_EP,
-        &reqwest::Method::GET,
-        {},
-        headers,
-        &EmptyRequest {},
-    )
-    .await;
-    let auth_resp = match auth_resp {
-        Ok(resp) => resp,
-        Err(staus_code) => {
-            return staus_code.into_response();
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
         }
     };
-    let body = match auth_resp.bytes().await {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
-        }
-    };
-    let check_token_response: CheckTokenResponse = serde_json::from_slice(&body).unwrap();
-    let username = check_token_response.username;
 
     ////
+
     let middle_request = DeleteTrackMiddleRequest {
         username,
         track_id: input_payload.track_id,
@@ -525,15 +530,62 @@ async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
     .await
 }
 
-// async fn create_playlist(
-//     headers: HeaderMap,
-//     Json(input_payload): Json<CreatePlaylistRequest>,
-// ) -> Response {
+async fn create_playlist(
+    headers: HeaderMap,
+    Json(input_payload): Json<CreatePlaylistRequest>,
+) -> Response {
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
+        }
+    };
 
-// }
+    let middle_request = CreatePlaylistMiddleRequest {
+        username,
+        name: input_payload.name,
+    };
 
-// create_playlist
-// delete_playlist
+    send_requests_with_timeouts(
+        &CREATE_PLAYLIST_EP,
+        &reqwest::Method::POST,
+        {},
+        HeaderMap::new(),
+        &middle_request,
+        "Playlists",
+    )
+    .await
+}
+
+async fn delete_playlist(
+    headers: HeaderMap,
+    Json(input_payload): Json<DeletePlaylistRequest>,
+) -> Response {
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
+        }
+    };
+
+    let middle_request = DeletePlaylistMiddleRequest {
+        username,
+        playlist_id: input_payload.playlist_id,
+    };
+
+    send_requests_with_timeouts(
+        &DELETE_PLAYLIST_EP,
+        &reqwest::Method::DELETE,
+        {},
+        HeaderMap::new(),
+        &middle_request,
+        "Playlists",
+    )
+    .await
+}
+
 // add_to_playlist
 // delete_from_playlist
 // get_playlist
