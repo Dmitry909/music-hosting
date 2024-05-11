@@ -605,6 +605,8 @@ async fn add_to_playlist(
         }
     };
 
+    // TODO: нужно еще проверять, правда ли такой трек вообще существует.
+
     let middle_request = AddToPlaylistMiddleRequest {
         username,
         playlist_id: input_payload.playlist_id,

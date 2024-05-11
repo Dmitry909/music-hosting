@@ -123,6 +123,8 @@ def test_create_delete_get_playlist():
 
     playlist_id = create_playlist(token, playlist_name)
 
+    # TODO: нужно еще проверять, правда ли такой трек вообще существует.
+    # И здесь трек должен существовать
     add_to_playlist(token, playlist_id, 123)
 
     tracks = get_playlist(playlist_id)
