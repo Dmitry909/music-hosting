@@ -15,6 +15,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool _isTokenValid = false;
   String username = "USERNAME INITIAL VALUE";
+  TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -99,6 +100,17 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  void _performSearch(BuildContext context) {
+    String query = _searchController.text;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        // builder: (context) => SearchResultsPage(query: query),
+        builder: (context) => LoginPage(),
+      ),
+    );
+  }
+
   Widget _buildWelcomePage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -115,6 +127,25 @@ class _MainPageState extends State<MainPage> {
             ),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(70.0),
+          child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search...',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.search),
+                  onPressed: () => _performSearch(context),
+                ),
+              ),
+              onSubmitted: (value) => _performSearch(context),
+            ),
+          ),
+        ),
       ),
       body: Center(
         child: Column(
@@ -128,16 +159,6 @@ class _MainPageState extends State<MainPage> {
                 );
               },
               child: Text('Upload track'),
-            ),
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SearchPage()),
-                );
-              },
-              child: Text('Search'),
             ),
           ],
         ),
