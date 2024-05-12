@@ -34,8 +34,11 @@ class _TrackWidgetState extends State<TrackWidget> {
       elevation: 2,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        leading: CircleAvatar(
-          child: Text(widget.id.toString()),
+        leading: IconButton(
+          icon: Icon(Icons.play_arrow),
+          onPressed: () {
+            
+          },
         ),
         title: Text(
           widget.name,
