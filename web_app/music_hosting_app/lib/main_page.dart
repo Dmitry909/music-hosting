@@ -39,7 +39,7 @@ class _MainPageState extends State<MainPage> {
       final token = (await getToken()) ?? "";
       if (token != "") {
         final response = await http.get(
-            Uri.parse('http://localhost:3002/check_token'),
+            Uri.parse('http://localhost:3000/check_token'),
             headers: {'Authorization': token});
         if (response.statusCode == 200) {
           setState(() {
@@ -55,7 +55,7 @@ class _MainPageState extends State<MainPage> {
     storeToken(username, "");
 
     final response = await http.post(
-      Uri.parse('http://localhost:3002/logout'),
+      Uri.parse('http://localhost:3000/logout'),
       headers: {'authorization': token},
     );
 
@@ -107,7 +107,7 @@ class _MainPageState extends State<MainPage> {
 
     try {
       Response response = await Dio().post(
-        'http://localhost:3002/upload_track',
+        'http://localhost:3000/upload_track',
         data: formData,
         options: Options(headers: headers),
       );
