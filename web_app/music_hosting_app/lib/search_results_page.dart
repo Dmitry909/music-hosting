@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'track_widget.dart';
+
 class SearchResultsPage extends StatefulWidget {
   final String query;
 
@@ -24,7 +26,6 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     final response =
         await http.get(Uri.parse('http://localhost:3000/search?query=$query'));
 
-    print(response.statusCode);
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
       return List<String>.from(data.map((id) => id.toString()));
@@ -52,8 +53,16 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           return ListView.builder(
             itemCount: ids.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(ids[index]),
+              // return ListTile(
+              //   title: Text(ids[index]),
+              // );
+              print(ids[index]);
+              return TrackWidget(
+                id: 123,
+                authorUsername: "Vasya",
+                name: "Name of the track",
+                cntRates: 0,
+                sumRates: 0,
               );
             },
           );
