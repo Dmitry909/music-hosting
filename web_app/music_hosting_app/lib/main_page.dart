@@ -5,7 +5,7 @@ import 'shared_state.dart';
 import 'signup_page.dart';
 import 'login_page.dart';
 import 'upload_track.dart';
-import 'search_page.dart';
+import 'search_results_page.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -105,8 +105,7 @@ class _MainPageState extends State<MainPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        // builder: (context) => SearchResultsPage(query: query),
-        builder: (context) => LoginPage(),
+        builder: (context) => SearchResultsPage(query: query),
       ),
     );
   }
