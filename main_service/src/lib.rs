@@ -16,8 +16,8 @@ use tokio::time::Duration;
 #[macro_use]
 extern crate lazy_static;
 
-const AUTH_HOST: &str = "http://localhost:3000";
-const TRACKS_HOST: &str = "http://localhost:3001";
+const AUTH_HOST: &str = "http://localhost:3001";
+const TRACKS_HOST: &str = "http://localhost:3002";
 const PLAYLISTS_HOST: &str = "http://localhost:3003";
 
 // EP = ENDPOINT

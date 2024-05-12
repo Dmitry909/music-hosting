@@ -1,5 +1,5 @@
 ### OK
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 {
@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://0.0.0.0:3000/login
+POST http://0.0.0.0:3001/login
 Content-Type: application/json
 
 {
@@ -17,7 +17,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://0.0.0.0:3000/logout
+POST http://0.0.0.0:3001/logout
 Content-Type: application/json
 Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgiLCJleHAiOjE3MTI1MDgwMjh9.QeEZ-5FYv438W0xlrv9ZyiLz1QN8dZ6bGEBTnnPIAQU
 
@@ -25,26 +25,26 @@ Authorization: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImFsZXgiLCJl
 }
 
 ### empty body
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 {
 }
 
 ### corrupted body 1
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 qwerty
 
 ### corrupted body 2
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 {abc}
 
 ### no password
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 {
@@ -52,7 +52,7 @@ Content-Type: application/json
 }
 
 ### no username
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 {
@@ -60,7 +60,7 @@ Content-Type: application/json
 }
 
 ### excess field
-POST http://0.0.0.0:3000/signup
+POST http://0.0.0.0:3001/signup
 Content-Type: application/json
 
 {

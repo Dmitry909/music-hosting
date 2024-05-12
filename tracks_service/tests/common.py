@@ -3,12 +3,14 @@ import json
 import os.path
 import filecmp
 
+host = 'http://localhost:3002'
+
 
 def delete_account(username: str, username_ids: list):
     json_data = {"username": username}
 
     response = requests.delete(
-        'http://localhost:3001/delete_account', json=json_data)
+        f'{host}/delete_account', json=json_data)
 
     assert (response.status_code == 200)
     for id in username_ids:
@@ -28,7 +30,7 @@ def upload_track_raw(username: str, track_name: str, file_path: str):
         }
 
         response = requests.post(
-            'http://localhost:3001/upload_track', files=files)
+            f'{host}/upload_track', files=files)
     return response
 
 
@@ -53,7 +55,7 @@ def delete_track(username: str, track_id: int):
     }
 
     response = requests.delete(
-        'http://localhost:3001/delete_track', json=json_data)
+        f'{host}/delete_track', json=json_data)
 
     assert (response.status_code == 200)
     assert (not os.path.exists(f'../tracks/{track_id}.mp3'))
@@ -61,14 +63,14 @@ def delete_track(username: str, track_id: int):
 
 def download_track(track_id: int):
     response = requests.get(
-        f'http://localhost:3001/download_track?id={track_id}')
+        f'{host}/download_track?id={track_id}')
 
     assert (response.status_code == 200)
     return response.content
 
 
 def search(query: str, expected_ids: set):
-    response = requests.get(f'http://localhost:3001/search?query={query}')
+    response = requests.get(f'{host}/search?query={query}')
 
     assert (response.status_code == 200)
     obj = json.loads(response.content)
@@ -91,6 +93,6 @@ def change_rate(track_id: int, cnt_rates_delta: int, sum_rates_delta: int):
     }
 
     response = requests.put(
-        'http://localhost:3001/change_rate', json=json_data)
+        f'{host}/change_rate', json=json_data)
 
     assert (response.status_code == 200)
