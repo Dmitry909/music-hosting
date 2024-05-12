@@ -100,7 +100,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-  void _performSearch(BuildContext context) {
+  void _search(BuildContext context) {
     String query = _searchController.text;
     Navigator.push(
       context,
@@ -138,10 +138,10 @@ class _MainPageState extends State<MainPage> {
                     OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 suffixIcon: IconButton(
                   icon: Icon(Icons.search),
-                  onPressed: () => _performSearch(context),
+                  onPressed: () => _search(context),
                 ),
               ),
-              onSubmitted: (value) => _performSearch(context),
+              onSubmitted: (value) => _search(context),
             ),
           ),
         ),
