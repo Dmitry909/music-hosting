@@ -139,9 +139,29 @@ def test_create_delete_get_playlist():
     print('test_create_delete_get_playlist OK')
 
 
+def test_search():
+    username = random_str(10)
+    password = random_str(10)
+    track_name = random_str(10)
+
+    signup(username, password)
+    token = login(username, password).headers["Authorization"]
+
+    file_path = "test_tracks/a.mp3"
+    track_id = upload_track(token, track_name, file_path)
+
+    search_results = search(track_name)
+    assert (search_results == [track_id])
+
+    delete_account(username, password)
+
+    print('test_search OK')
+
+
 test_login_logout()
 test_login_check_token()
 test_upload_download()
 test_upload_delete()
 test_upload_delete_account()
 test_create_delete_get_playlist()
+test_search()

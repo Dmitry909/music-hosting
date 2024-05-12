@@ -668,7 +668,7 @@ async fn get_playlist(Query(params): Query<GetPlaylistParams>) -> Response {
 async fn search(Query(params): Query<SearchParams>) -> Response {
     send_requests_with_timeouts(
         &SEARCH_EP_TRACKS,
-        &reqwest::Method::POST,
+        &reqwest::Method::GET,
         params,
         HeaderMap::new(),
         &EmptyRequest {},

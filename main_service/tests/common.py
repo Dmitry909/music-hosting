@@ -111,10 +111,10 @@ def search(query: str):
     assert (response.status_code == 200)
     obj = json.loads(response.content)
     assert (isinstance(obj, list))
-    ids = set()
+    ids = list()
     for el in obj:
         assert (isinstance(el, dict))
         assert ('id' in el)
         assert (isinstance(el['id'], int))
-        ids.add(el['id'])
+        ids.append(el['id'])
     return ids
