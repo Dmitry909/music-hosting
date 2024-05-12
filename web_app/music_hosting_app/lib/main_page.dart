@@ -6,6 +6,7 @@ import 'signup_page.dart';
 import 'login_page.dart';
 import 'upload_track.dart';
 import 'search_results_page.dart';
+import 'music_player.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -162,6 +163,7 @@ class _MainPageState extends State<MainPage> {
           ],
         ),
       ),
+      bottomNavigationBar: MusicPlayer(),
     );
   }
 }
