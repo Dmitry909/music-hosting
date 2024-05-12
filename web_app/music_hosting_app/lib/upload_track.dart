@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 
 import 'shared_state.dart';
-import 'main_page.dart';
 
 class UploadTrackPage extends StatefulWidget {
   @override

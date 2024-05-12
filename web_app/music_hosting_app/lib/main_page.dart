@@ -5,6 +5,7 @@ import 'shared_state.dart';
 import 'signup_page.dart';
 import 'login_page.dart';
 import 'upload_track.dart';
+import 'search_page.dart';
 
 class MainPage extends StatefulWidget {
   @override
@@ -127,6 +128,16 @@ class _MainPageState extends State<MainPage> {
                 );
               },
               child: Text('Upload track'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SearchPage()),
+                );
+              },
+              child: Text('Search'),
             ),
           ],
         ),
