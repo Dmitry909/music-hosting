@@ -14,7 +14,7 @@ class SearchResultsPage extends StatefulWidget {
 }
 
 class _SearchResultsPageState extends State<SearchResultsPage> {
-  late Future<List<String>> _idsFuture;
+  late Future<List<Map<String, dynamic>>> _idsFuture;
 
   @override
   void initState() {
@@ -22,13 +22,13 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     _idsFuture = _fetchIds(widget.query);
   }
 
-  Future<List<String>> _fetchIds(String query) async {
+  Future<List<Map<String, dynamic>>> _fetchIds(String query) async {
     final response =
         await http.get(Uri.parse('http://localhost:3000/search?query=$query'));
 
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
-      return List<String>.from(data.map((id) => id.toString()));
+      return List<Map<String, dynamic>>.from(data);
     } else {
       throw Exception('Failed to load Ids');
     }
@@ -40,7 +40,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       appBar: AppBar(
         title: Text('Search Results for "${widget.query}"'),
       ),
-      body: FutureBuilder<List<String>>(
+      body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _idsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -58,11 +58,11 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
               // );
               print(ids[index]);
               return TrackWidget(
-                id: 123,
-                authorUsername: "Vasya",
-                name: "Name of the track",
-                cntRates: 0,
-                sumRates: 0,
+                id: ids[index]["id"],
+                authorUsername: ids[index]["author_username"],
+                name: ids[index]["name"],
+                cntRates: ids[index]["cnt_rates"],
+                sumRates: ids[index]["sum_rates"],
               );
             },
           );

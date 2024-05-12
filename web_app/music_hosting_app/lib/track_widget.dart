@@ -44,16 +44,18 @@ class _TrackWidgetState extends State<TrackWidget> {
           ),
         ),
         subtitle: Text('by ${widget.authorUsername}'),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.star),
+            const SizedBox(width: 4),
             Text(
               _calculateRating().toStringAsFixed(1),
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(width: 4),
             Text('(${widget.cntRates} ratings)'),
           ],
         ),
