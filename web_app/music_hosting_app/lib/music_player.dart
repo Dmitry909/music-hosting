@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+// import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
 
 import 'shared_state.dart';
 
 class MusicPlayer extends StatefulWidget {
+  const MusicPlayer({super.key});
+
   @override
   _MusicPlayerState createState() => _MusicPlayerState();
 }
 
 class _MusicPlayerState extends State<MusicPlayer> {
-  AudioPlayer audioPlayer = AudioPlayer();
+  // AudioPlayer audioPlayer = AudioPlayer();
   bool isPlaying = false;
-  Duration duration = Duration();
-  Duration position = Duration();
+  Duration duration = const Duration();
+  Duration position = const Duration();
 
   @override
   void initState() {
     super.initState();
-    audioPlayer.onDurationChanged.listen((Duration d) {
-      setState(() {
-        duration = d;
-      });
-    });
+    // audioPlayer.onDurationChanged.listen((Duration d) {
+    //   setState(() {
+    //     duration = d;
+    //   });
+    // });
     // audioPlayer.onAudioPositionChanged.listen((Duration p) {
     //   setState(() {
     //     position = p;
@@ -32,20 +34,20 @@ class _MusicPlayerState extends State<MusicPlayer> {
 
   @override
   void dispose() {
-    audioPlayer.dispose();
+    // audioPlayer.dispose();
     super.dispose();
   }
 
   void playMusic(int id) async {
     print('Called playMusic of $id');
-    await audioPlayer.play('http://localhost:3000/download_track?id=$id');
+    // await audioPlayer.play('http://localhost:3000/download_track?id=$id');
     setState(() {
       isPlaying = true;
     });
   }
 
   void pauseMusic() async {
-    await audioPlayer.pause();
+    // await audioPlayer.pause();
     setState(() {
       isPlaying = false;
     });
@@ -75,7 +77,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           IconButton(
-            icon: Icon(Icons.skip_previous),
+            icon: const Icon(Icons.skip_previous),
             onPressed: previousTrack,
           ),
           IconButton(
@@ -87,7 +89,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
                   },
           ),
           IconButton(
-            icon: Icon(Icons.skip_next),
+            icon: const Icon(Icons.skip_next),
             onPressed: nextTrack,
           ),
           Expanded(
@@ -96,13 +98,13 @@ class _MusicPlayerState extends State<MusicPlayer> {
               min: 0.0,
               max: duration.inSeconds.toDouble(),
               onChanged: (double value) {
-                audioPlayer.seek(Duration(seconds: value.toInt()));
+                // audioPlayer.seek(Duration(seconds: value.toInt()));
               },
             ),
           ),
           Text(
             '${formatTime(position)} / ${formatTime(duration)}',
-            style: TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: 16),
           ),
         ],
       ),

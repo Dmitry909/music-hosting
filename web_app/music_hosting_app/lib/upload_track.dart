@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 
 import 'shared_state.dart';
 
 class UploadTrackPage extends StatefulWidget {
+  const UploadTrackPage({super.key});
+
   @override
   _UploadTrackPageState createState() => _UploadTrackPageState();
 }
 
 class _UploadTrackPageState extends State<UploadTrackPage> {
-  TextEditingController _trackNameController = TextEditingController();
+  final TextEditingController _trackNameController = TextEditingController();
   String _selectFileStatus = 'File not selected';
   String _uploadTrackResult = '';
   PlatformFile? _selectedFile;
@@ -88,7 +89,7 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Upload track page'),
+        title: const Text('Upload track page'),
       ),
       body: Center(
         child: Column(
@@ -96,14 +97,14 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
           children: [
             TextField(
               controller: _trackNameController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Track name',
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _selectFile,
-              child: Text('Select File'),
+              child: const Text('Select File'),
             ),
             Text(
               _selectFileStatus,
@@ -113,10 +114,10 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
                     : Colors.green,
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _uploadTrack,
-              child: Text('Upload track'),
+              child: const Text('Upload track'),
             ),
             Text(
               _uploadTrackResult,

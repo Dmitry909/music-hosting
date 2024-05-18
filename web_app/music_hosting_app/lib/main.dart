@@ -7,11 +7,13 @@ import 'shared_state.dart';
 void main() {
   runApp(ChangeNotifierProvider(
     create: (context) => QueueModel(),
-    child: MusicHostingApp(),
+    child: const MusicHostingApp(),
   ));
 }
 
 class MusicHostingApp extends StatelessWidget {
+  const MusicHostingApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -19,7 +21,7 @@ class MusicHostingApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MainPage(),
+      home: const MainPage(),
     );
   }
 }

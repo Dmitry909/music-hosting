@@ -9,6 +9,8 @@ import 'search_results_page.dart';
 import 'music_player.dart';
 
 class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
   @override
   _MainPageState createState() => _MainPageState();
 }
@@ -16,7 +18,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool _isTokenValid = false;
   String username = "USERNAME INITIAL VALUE";
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -56,7 +58,7 @@ class _MainPageState extends State<MainPage> {
     Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => MainPage(),
+          builder: (context) => const MainPage(),
         ));
   }
 
@@ -70,7 +72,7 @@ class _MainPageState extends State<MainPage> {
   Widget _buildLoginSignupPage(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Main Page'),
+        title: const Text('Main Page'),
       ),
       body: Center(
         child: Column(
@@ -80,20 +82,20 @@ class _MainPageState extends State<MainPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
                 );
               },
-              child: Text('Log in'),
+              child: const Text('Log in'),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => SignupPage()),
+                  MaterialPageRoute(builder: (context) => const SignupPage()),
                 );
               },
-              child: Text('Sign up'),
+              child: const Text('Sign up'),
             ),
           ],
         ),
@@ -122,15 +124,15 @@ class _MainPageState extends State<MainPage> {
               alignment: Alignment.centerRight,
               child: ElevatedButton(
                 onPressed: _logout,
-                child: Text('Log out'),
+                child: const Text('Log out'),
               ),
             ),
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(70.0),
+          preferredSize: const Size.fromHeight(70.0),
           child: Padding(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -138,7 +140,7 @@ class _MainPageState extends State<MainPage> {
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 suffixIcon: IconButton(
-                  icon: Icon(Icons.search),
+                  icon: const Icon(Icons.search),
                   onPressed: () => _search(context),
                 ),
               ),
@@ -155,15 +157,15 @@ class _MainPageState extends State<MainPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => UploadTrackPage()),
+                  MaterialPageRoute(builder: (context) => const UploadTrackPage()),
                 );
               },
-              child: Text('Upload track'),
+              child: const Text('Upload track'),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: MusicPlayer(),
+      bottomNavigationBar: const MusicPlayer(),
     );
   }
 }

@@ -11,13 +11,13 @@ class TrackWidget extends StatefulWidget {
   final int sumRates;
 
   const TrackWidget({
-    Key? key,
+    super.key,
     required this.id,
     required this.authorUsername,
     required this.name,
     required this.cntRates,
     required this.sumRates,
-  }) : super(key: key);
+  });
 
   @override
   _TrackWidgetState createState() => _TrackWidgetState();
@@ -40,7 +40,7 @@ class _TrackWidgetState extends State<TrackWidget> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
         leading: IconButton(
-          icon: Icon(Icons.play_arrow),
+          icon: const Icon(Icons.play_arrow),
           onPressed: () => queueModel.clearAndAddToQueue(widget.id),
         ),
         title: Text(

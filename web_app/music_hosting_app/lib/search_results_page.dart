@@ -7,7 +7,7 @@ import 'track_widget.dart';
 class SearchResultsPage extends StatefulWidget {
   final String query;
 
-  SearchResultsPage({Key? key, required this.query}) : super(key: key);
+  const SearchResultsPage({super.key, required this.query});
 
   @override
   _SearchResultsPageState createState() => _SearchResultsPageState();
@@ -44,7 +44,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
         future: _idsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
           }
