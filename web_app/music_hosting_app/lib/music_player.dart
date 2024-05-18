@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:provider/provider.dart';
+
+import 'shared_state.dart';
 
 class MusicPlayer extends StatefulWidget {
   @override
@@ -20,11 +23,11 @@ class _MusicPlayerState extends State<MusicPlayer> {
         duration = d;
       });
     });
-    audioPlayer.onAudioPositionChanged.listen((Duration p) {
-      setState(() {
-        position = p;
-      });
-    });
+    // audioPlayer.onAudioPositionChanged.listen((Duration p) {
+    //   setState(() {
+    //     position = p;
+    //   });
+    // });
   }
 
   @override
@@ -33,8 +36,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
     super.dispose();
   }
 
-  void playMusic() async {
-    await audioPlayer.play('https://example.com/music.mp3');
+  void playMusic(int id) async {
+    print('Called playMusic of $id');
+    await audioPlayer.play('http://localhost:3000/download_track?id=$id');
     setState(() {
       isPlaying = true;
     });
@@ -64,6 +68,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
 
   @override
   Widget build(BuildContext context) {
+    final queueModel = Provider.of<QueueModel>(context);
+
     return BottomAppBar(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -74,7 +80,11 @@ class _MusicPlayerState extends State<MusicPlayer> {
           ),
           IconButton(
             icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-            onPressed: isPlaying ? pauseMusic : playMusic,
+            onPressed: isPlaying
+                ? pauseMusic
+                : () {
+                    playMusic(queueModel.removeFromQueue());
+                  },
           ),
           IconButton(
             icon: Icon(Icons.skip_next),

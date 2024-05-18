@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'shared_state.dart';
 
 class TrackWidget extends StatefulWidget {
   final int id;
@@ -30,15 +33,15 @@ class _TrackWidgetState extends State<TrackWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final queueModel = Provider.of<QueueModel>(context);
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
         leading: IconButton(
           icon: Icon(Icons.play_arrow),
-          onPressed: () {
-            
-          },
+          onPressed: () => queueModel.clearAndAddToQueue(widget.id),
         ),
         title: Text(
           widget.name,

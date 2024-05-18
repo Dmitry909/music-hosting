@@ -56,7 +56,6 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
               // return ListTile(
               //   title: Text(ids[index]),
               // );
-              print(ids[index]);
               return TrackWidget(
                 id: ids[index]["id"],
                 authorUsername: ids[index]["author_username"],
