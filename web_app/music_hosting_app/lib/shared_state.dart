@@ -18,17 +18,17 @@ Future<String?> getToken() async {
 }
 
 class PlayerData with ChangeNotifier {
-  final List<int> _queue = [];
   int _currentTrackId = -1;
   bool _newTrackAdded = false;
-
-  // List<int> get queue => _queue;
 
   void setCurrentTrackId(int currentTrackId) {
     _currentTrackId = currentTrackId;
     _newTrackAdded = true;
-    _queue.clear();
     notifyListeners();
+  }
+
+  void goToNextTrack() {
+    // TODO сделать запрос на получение следующего трека
   }
 
   int getCurrentTrackId() {

@@ -21,6 +21,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
   void initState() {
     super.initState();
     audioPlayer.onDurationChanged.listen((Duration d) {
+      print('Called audioPlayer.onDurationChanged');
       setState(() {
         duration = d;
       });
@@ -31,6 +32,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
       });
     });
     audioPlayer.onPlayerComplete.listen((event) {
+      print('Called audioPlayer.onPlayerComplete');
       setState(() {
         isPlaying = false;
         position = const Duration();
@@ -113,7 +115,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
               min: 0.0,
               max: duration.inSeconds.toDouble(),
               onChanged: (double value) {
-                audioPlayer.seek(Duration(seconds: value.toInt()));
+                // audioPlayer.seek(Duration(seconds: value.toInt()));
               },
             ),
           ),
