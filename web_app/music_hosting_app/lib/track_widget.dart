@@ -33,7 +33,7 @@ class _TrackWidgetState extends State<TrackWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final queueModel = Provider.of<QueueModel>(context);
+    final playerData = Provider.of<PlayerData>(context);
 
     return Card(
       elevation: 2,
@@ -41,7 +41,7 @@ class _TrackWidgetState extends State<TrackWidget> {
       child: ListTile(
         leading: IconButton(
           icon: const Icon(Icons.play_arrow),
-          onPressed: () => queueModel.clearAndAddToQueue(widget.id),
+          onPressed: () => playerData.setCurrentTrackId(widget.id),
         ),
         title: Text(
           widget.name,

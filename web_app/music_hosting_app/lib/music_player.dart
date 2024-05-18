@@ -16,7 +16,6 @@ class _MusicPlayerState extends State<MusicPlayer> {
   bool isPlaying = false;
   Duration duration = const Duration();
   Duration position = const Duration();
-  int? currentTrackId;
 
   @override
   void initState() {
@@ -26,11 +25,17 @@ class _MusicPlayerState extends State<MusicPlayer> {
         duration = d;
       });
     });
-    // audioPlayer.onAudioPositionChanged.listen((Duration p) {
-    //   setState(() {
-    //     position = p;
-    //   });
-    // });
+    audioPlayer.onPositionChanged.listen((Duration p) {
+      setState(() {
+        position = p;
+      });
+    });
+    audioPlayer.onPlayerComplete.listen((event) {
+      setState(() {
+        isPlaying = false;
+        position = const Duration();
+      });
+    });
   }
 
   @override
@@ -39,12 +44,14 @@ class _MusicPlayerState extends State<MusicPlayer> {
     super.dispose();
   }
 
-  void playMusic(queueModel) async {
+  void playMusic(playerData) async {
     print('Called playMusic');
-    currentTrackId ??= queueModel.removeFromQueue();
-    int trackId = currentTrackId ?? 0;
-    await audioPlayer
-        .play(UrlSource('http://localhost:3000/download_track?id=$trackId'));
+    final currentTrackId = playerData.getCurrentTrackId();
+    if (currentTrackId == -1) {
+      return;
+    }
+    await audioPlayer.play(
+        UrlSource('http://localhost:3000/download_track?id=$currentTrackId'));
     setState(() {
       isPlaying = true;
     });
@@ -58,11 +65,11 @@ class _MusicPlayerState extends State<MusicPlayer> {
   }
 
   void previousTrack() {
-    // Implement previous track logic
+    // Would be implemented
   }
 
   void nextTrack() {
-    // Implement next track logic
+    // Would be implemented
   }
 
   String formatTime(Duration duration) {
@@ -74,7 +81,11 @@ class _MusicPlayerState extends State<MusicPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final queueModel = Provider.of<QueueModel>(context);
+    final playerData = Provider.of<PlayerData>(context);
+
+    if (playerData.releaseNewTrackAdded()) {
+      playMusic(playerData);
+    }
 
     return BottomAppBar(
       child: Row(
@@ -89,7 +100,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
             onPressed: isPlaying
                 ? pauseMusic
                 : () {
-                    playMusic(queueModel);
+                    playMusic(playerData);
                   },
           ),
           IconButton(

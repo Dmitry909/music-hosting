@@ -6,7 +6,7 @@ import 'shared_state.dart';
 
 void main() {
   runApp(ChangeNotifierProvider(
-    create: (context) => QueueModel(),
+    create: (context) => PlayerData(),
     child: const MusicHostingApp(),
   ));
 }

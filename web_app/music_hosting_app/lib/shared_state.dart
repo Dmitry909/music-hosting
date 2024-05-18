@@ -17,29 +17,48 @@ Future<String?> getToken() async {
   return prefs.getString('authToken');
 }
 
-class QueueModel with ChangeNotifier {
+class PlayerData with ChangeNotifier {
   final List<int> _queue = [];
+  int _currentTrackId = -1;
+  bool _newTrackAdded = false;
 
-  List<int> get queue => _queue;
+  // List<int> get queue => _queue;
 
-  void clearAndAddToQueue(int value) {
+  void setCurrentTrackId(int currentTrackId) {
+    _currentTrackId = currentTrackId;
+    _newTrackAdded = true;
     _queue.clear();
-    print('Cleared queue');
-    addToQueue(value);
-  }
-
-  void addToQueue(int value) {
-    _queue.add(value);
-    print('Added $value to the queue');
     notifyListeners();
   }
 
-  int removeFromQueue() {
-    if (_queue.isNotEmpty) {
-      final res = _queue.removeAt(0);
-      notifyListeners();
-      return res;
-    }
-    throw Exception("Tried to pop from empty queue");
+  int getCurrentTrackId() {
+    return _currentTrackId;
   }
+
+  bool releaseNewTrackAdded() {
+    final result = _newTrackAdded;
+    _newTrackAdded = false;
+    return result;
+  }
+
+  // void clearAndAddToQueue(int value) {
+  //   _queue.clear();
+  //   print('Cleared queue');
+  //   addToQueue(value);
+  // }
+
+  // void addToQueue(int value) {
+  //   _queue.add(value);
+  //   print('Added $value to the queue');
+  //   notifyListeners();
+  // }
+
+  // int removeFromQueue() {
+  //   if (_queue.isNotEmpty) {
+  //     final res = _queue.removeAt(0);
+  //     notifyListeners();
+  //     return res;
+  //   }
+  //   throw Exception("Tried to pop from empty queue");
+  // }
 }
