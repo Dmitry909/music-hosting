@@ -16,6 +16,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
   bool isPlaying = false;
   Duration duration = const Duration();
   Duration position = const Duration();
+  int? currentTrackId;
 
   @override
   void initState() {
@@ -38,9 +39,12 @@ class _MusicPlayerState extends State<MusicPlayer> {
     super.dispose();
   }
 
-  void playMusic(int id) async {
-    print('Called playMusic of $id');
-    await audioPlayer.play(UrlSource('http://localhost:3000/download_track?id=$id'));
+  void playMusic(queueModel) async {
+    print('Called playMusic');
+    currentTrackId ??= queueModel.removeFromQueue();
+    int trackId = currentTrackId ?? 0;
+    await audioPlayer
+        .play(UrlSource('http://localhost:3000/download_track?id=$trackId'));
     setState(() {
       isPlaying = true;
     });
@@ -85,7 +89,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
             onPressed: isPlaying
                 ? pauseMusic
                 : () {
-                    playMusic(queueModel.removeFromQueue());
+                    playMusic(queueModel);
                   },
           ),
           IconButton(
