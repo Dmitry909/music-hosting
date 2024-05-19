@@ -344,17 +344,16 @@ async fn get_random_track_id(
     State(state): State<Arc<AppState>>,
 ) -> Response {
     let query_result = sqlx::query_as!(
-        TracksOnlyIdModel,
-        "SELECT id FROM tracks ORDER BY RANDOM() LIMIT 1",
+        TracksModel,
+        "SELECT * FROM tracks ORDER BY RANDOM() LIMIT 1",
     )
     .fetch_optional(&state.tracks_pool)
     .await;
 
     match query_result {
-        Ok(track_id_optional) => match track_id_optional {
-            Some(track_id) => {
-                let resp = GetRandomTrackIdResponse { id: track_id.id };
-                (StatusCode::OK, Json(resp)).into_response()    
+        Ok(track_optional) => match track_optional {
+            Some(track) => {
+                (StatusCode::OK, Json(track)).into_response()
             },
             None => {
                 (StatusCode::NOT_FOUND, "There are no tracks").into_response()    
