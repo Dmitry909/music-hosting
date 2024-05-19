@@ -158,6 +158,17 @@ def test_search():
     print('test_search OK')
 
 
+def test_get_next_track():
+    username = random_str(10)
+    password = random_str(10)
+
+    signup(username, password)
+    token = login(username, password).headers["Authorization"]
+    get_next_track(token)
+
+    print('test_get_next_track OK')
+
+
 test_login_logout()
 test_login_check_token()
 test_upload_download()
@@ -165,3 +176,4 @@ test_upload_delete()
 test_upload_delete_account()
 test_create_delete_get_playlist()
 test_search()
+test_get_next_track()

@@ -19,6 +19,7 @@ extern crate lazy_static;
 const AUTH_HOST: &str = "http://localhost:3001";
 const TRACKS_HOST: &str = "http://localhost:3002";
 const PLAYLISTS_HOST: &str = "http://localhost:3003";
+const QUEUE_HOST: &str = "http://localhost:3004";
 
 // EP = ENDPOINT
 lazy_static! {
@@ -42,6 +43,9 @@ lazy_static! {
     pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
     pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
     pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
+    //
+    pub static ref PLAY_TRACK_EP: String = format!("{}/play_track", QUEUE_HOST);
+    pub static ref GET_NEXT_TRACK_EP: String = format!("{}/get_next_track", QUEUE_HOST);
 }
 
 pub async fn create_app() -> Router {
@@ -61,6 +65,9 @@ pub async fn create_app() -> Router {
         .route("/add_to_playlist", put(add_to_playlist))
         .route("/delete_from_playlist", delete(delete_from_playlist))
         .route("/get_playlist", get(get_playlist))
+        //
+        // .route("/play_track", get(play_track))
+        .route("/get_next_track", get(get_next_track))
         //
         .route("/search", get(search))
         //
@@ -670,6 +677,29 @@ async fn search(Query(params): Query<SearchParams>) -> Response {
         &SEARCH_EP_TRACKS,
         &reqwest::Method::GET,
         params,
+        HeaderMap::new(),
+        &EmptyRequest {},
+        "Tracks",
+    )
+    .await
+}
+
+async fn get_next_track(
+    headers: HeaderMap,
+) -> Response {
+    let resolve_result = resolve_username_from_token(headers).await;
+    let username = match resolve_result {
+        Ok(username) => username,
+        Err(response) => {
+            return response;
+        }
+    };
+
+    // TODO this request must be sent with username
+    send_requests_with_timeouts(
+        &GET_NEXT_TRACK_EP,
+        &reqwest::Method::GET,
+        {},
         HeaderMap::new(),
         &EmptyRequest {},
         "Tracks",

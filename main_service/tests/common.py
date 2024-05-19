@@ -118,3 +118,15 @@ def search(query: str):
         assert (isinstance(el['id'], int))
         ids.append(el['id'])
     return ids
+
+
+def get_next_track(token: str):
+    response = requests.get(f'{host}/get_next_track', headers={"Authorization": token})
+
+    assert(response.status_code == 200)
+    obj = json.loads(response.content)
+    assert (isinstance(obj, dict))
+    assert ('id' in obj)
+    assert (isinstance(obj['id'], int))
+
+    return obj['id']
