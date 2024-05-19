@@ -66,14 +66,6 @@ class _MusicPlayerState extends State<MusicPlayer> {
     });
   }
 
-  void previousTrack() {
-    // Would be implemented
-  }
-
-  void nextTrack(playerData) {
-    playerData.goToNextTrack();
-  }
-
   String formatTime(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
@@ -89,13 +81,21 @@ class _MusicPlayerState extends State<MusicPlayer> {
       playMusic(playerData);
     }
 
+    var pos = position;
+    final dur = duration;
+    if (pos.inSeconds.toDouble() > 0.0 && dur.inSeconds.toDouble() == 0.0) {
+      pos = Duration.zero;
+    }
+
     return BottomAppBar(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           IconButton(
             icon: const Icon(Icons.skip_previous),
-            onPressed: previousTrack,
+            onPressed: () {
+              playerData.goToPreviousTrack();
+            },
           ),
           IconButton(
             icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
@@ -108,21 +108,21 @@ class _MusicPlayerState extends State<MusicPlayer> {
           IconButton(
             icon: const Icon(Icons.skip_next),
             onPressed: () {
-              nextTrack(playerData);
+              playerData.goToNextTrack();
             },
           ),
           Expanded(
             child: Slider(
-              value: position.inSeconds.toDouble(),
+              value: pos.inSeconds.toDouble(),
               min: 0.0,
-              max: duration.inSeconds.toDouble(),
+              max: dur.inSeconds.toDouble(),
               onChanged: (double value) {
                 // audioPlayer.seek(Duration(seconds: value.toInt()));
               },
             ),
           ),
           Text(
-            '${formatTime(position)} / ${formatTime(duration)}',
+            '${formatTime(pos)} / ${formatTime(dur)}',
             style: const TextStyle(fontSize: 16),
           ),
         ],

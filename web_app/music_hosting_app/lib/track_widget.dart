@@ -41,7 +41,7 @@ class _TrackWidgetState extends State<TrackWidget> {
       child: ListTile(
         leading: IconButton(
           icon: const Icon(Icons.play_arrow),
-          onPressed: () => playerData.setCurrentTrackId(widget.id),
+          onPressed: () => playerData.setNewTrackId(widget.id),
         ),
         title: Text(
           widget.name,

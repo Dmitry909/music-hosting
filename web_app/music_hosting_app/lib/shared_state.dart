@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:collection';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,16 +22,37 @@ Future<String?> getToken() async {
 }
 
 class PlayerData with ChangeNotifier {
-  int _currentTrackId = -1;
+  int _currentPos = -1;
+  List<int> _history = [];
   bool _newTrackAdded = false;
 
-  void setCurrentTrackId(int currentTrackId) {
-    _currentTrackId = currentTrackId;
+  void setNewTrackId(int currentTrackId) {
+    _history.clear();
+    _history.add(currentTrackId);
+    _currentPos = 0;
     _newTrackAdded = true;
     notifyListeners();
   }
 
+  void goToPreviousTrack() {
+    print('goToPreviousTrack called');
+    print(_currentPos);
+    if (_currentPos >= 1) {
+      _currentPos -= 1;
+      _newTrackAdded = true;
+      notifyListeners();
+    }
+  }
+
   void goToNextTrack() async {
+    print('goToNextTrack called');
+    if (_currentPos >= 0 && _currentPos + 1 < _history.length) {
+      _currentPos += 1;
+      _newTrackAdded = true;
+      notifyListeners();
+      return;
+    }
+
     final token = (await getToken())!;
 
     final response = await http.get(
@@ -47,16 +69,21 @@ class PlayerData with ChangeNotifier {
         throw Exception('No id in response of get_next_track');
       }
       int id = data['id'];
-      _currentTrackId = id;
+
+      _history.add(id);
+      _currentPos += 1;
+      _newTrackAdded = true;
+      notifyListeners();
     } else {
       throw Exception('Response of get_next_track is not 200');
     }
-    _newTrackAdded = true;
-    notifyListeners();
   }
 
   int getCurrentTrackId() {
-    return _currentTrackId;
+    if (_currentPos < 0 || _currentPos >= _history.length) {
+      return -1;
+    }
+    return _history[_currentPos];
   }
 
   bool releaseNewTrackAdded() {
@@ -64,25 +91,4 @@ class PlayerData with ChangeNotifier {
     _newTrackAdded = false;
     return result;
   }
-
-  // void clearAndAddToQueue(int value) {
-  //   _queue.clear();
-  //   print('Cleared queue');
-  //   addToQueue(value);
-  // }
-
-  // void addToQueue(int value) {
-  //   _queue.add(value);
-  //   print('Added $value to the queue');
-  //   notifyListeners();
-  // }
-
-  // int removeFromQueue() {
-  //   if (_queue.isNotEmpty) {
-  //     final res = _queue.removeAt(0);
-  //     notifyListeners();
-  //     return res;
-  //   }
-  //   throw Exception("Tried to pop from empty queue");
-  // }
 }
