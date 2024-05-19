@@ -75,6 +75,7 @@ pub async fn create_app(tracks_db_url: &str, need_to_clear: bool) -> Router {
         .route("/delete_track", delete(delete_track))
         .route("/download_track", get(download_track))
         .route("/search", get(search))
+        .route("/get_random_track_id", get(get_random_track_id))
         .route("/change_rate", put(change_rate))
         // .route("/comment_track", post(comment_track)) // TODO
         // .route("/delete_comment", delete(delete_comment)) // TODO
@@ -96,6 +97,11 @@ struct UploadTrackRequest {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct UploadTrackResponse {
+    id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GetRandomTrackIdResponse {
     id: i64,
 }
 
@@ -331,6 +337,30 @@ async fn search(
         Err(_) => {
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response())
         }
+    }
+}
+
+async fn get_random_track_id(
+    State(state): State<Arc<AppState>>,
+) -> Response {
+    let query_result = sqlx::query_as!(
+        TracksOnlyIdModel,
+        "SELECT id FROM tracks ORDER BY RANDOM() LIMIT 1",
+    )
+    .fetch_optional(&state.tracks_pool)
+    .await;
+
+    match query_result {
+        Ok(track_id_optional) => match track_id_optional {
+            Some(track_id) => {
+                let resp = GetRandomTrackIdResponse { id: track_id.id };
+                (StatusCode::OK, Json(resp)).into_response()    
+            },
+            None => {
+                (StatusCode::NOT_FOUND, "There are no tracks").into_response()    
+            }
+        },
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Unknown database error").into_response(),
     }
 }
 

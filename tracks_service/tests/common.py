@@ -85,6 +85,18 @@ def search(query: str, expected_ids: set):
     return obj
 
 
+def get_random_track_id():
+    response = requests.get(f'{host}/get_random_track_id')
+    print(response)
+
+    assert(response.status_code == 200)
+    obj = json.loads(response.content)
+    assert (isinstance(obj, dict))
+    assert ('id' in obj)
+    assert (isinstance(obj['id'], int))
+    return obj['id']
+
+
 def change_rate(track_id: int, cnt_rates_delta: int, sum_rates_delta: int):
     json_data = {
         "track_id": track_id,

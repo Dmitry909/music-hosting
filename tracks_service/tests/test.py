@@ -14,7 +14,7 @@ def test_upload_track_and_delete_account():
     id_c = upload_track(account, random_str(10), 'test_tracks/c.mp3')
 
     delete_account(account, [id_a, id_b, id_c])
-    print('test_upload_track_and_delete_account success')
+    print('test_upload_track_and_delete_account OK')
 
 
 def test_upload_the_same_second_time():
@@ -27,7 +27,7 @@ def test_upload_the_same_second_time():
     # TODO добавить обработку добавления трека с тем же именем в коде сервера, возвращать 4xx код, на строке выше поменять
 
     delete_account(account, [id_a])
-    print('test_upload_the_same_second_time success')
+    print('test_upload_the_same_second_time OK')
 
 
 def test_upload_delete_track_and_account():
@@ -41,7 +41,7 @@ def test_upload_delete_track_and_account():
     assert (os.path.exists(f'../tracks/{id_c}.mp3'))
 
     delete_account(account, [id_b, id_c])
-    print('test_upload_delete_track_and_account success')
+    print('test_upload_delete_track_and_account OK')
 
 
 def test_upload_and_download():
@@ -55,7 +55,7 @@ def test_upload_and_download():
         assert (track_content_got == track_content_real)
     delete_account(account, [id])
 
-    print('test_upload_and_download success')
+    print('test_upload_and_download OK')
 
 
 def test_search():
@@ -76,7 +76,7 @@ def test_search():
     delete_account(account1, [id_a])
     delete_account(account2, [id_b, id_c])
 
-    print('test_search success')
+    print('test_search OK')
 
 
 def test_change_rate():
@@ -104,7 +104,17 @@ def test_change_rate():
 
     delete_account(account, [id])
 
-    print('test_change_rate success')
+    print('test_change_rate OK')
+
+
+def test_get_random_track_id():
+    account = random_str(10)
+    track_name = random_str(10)
+    
+    id1 = upload_track(account, track_name, 'test_tracks/a.mp3')
+    assert (id1 >= 0)
+
+    print('test_get_random_track_id OK')
 
 
 test_upload_track_and_delete_account()
@@ -113,5 +123,6 @@ test_upload_delete_track_and_account()
 test_upload_and_download()
 test_search()
 test_change_rate()
+test_get_random_track_id()
 
 # TODO добавить тест на upload трека с существующим именем

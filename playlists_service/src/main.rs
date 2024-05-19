@@ -5,7 +5,7 @@ use std::env;
 async fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: ./main_service [port]");
+        println!("Usage: ./playlists_service [port]");
         std::process::exit(1);
     }
     let port = &args[1];
