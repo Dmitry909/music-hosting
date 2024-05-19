@@ -1,5 +1,8 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> storeToken(String username, String token) async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -27,8 +30,29 @@ class PlayerData with ChangeNotifier {
     notifyListeners();
   }
 
-  void goToNextTrack() {
-    // TODO сделать запрос на получение следующего трека
+  void goToNextTrack() async {
+    final token = (await getToken())!;
+
+    final response = await http.get(
+      Uri.parse('http://localhost:3000/get_next_track'),
+      headers: {'authorization': token},
+    );
+
+    print(response.statusCode);
+
+    if (response.statusCode == 200) {
+      print(response.body);
+      Map<String, dynamic> data = jsonDecode(response.body);
+      if (data['id'] == null) {
+        throw Exception('No id in response of get_next_track');
+      }
+      int id = data['id'];
+      _currentTrackId = id;
+    } else {
+      throw Exception('Response of get_next_track is not 200');
+    }
+    _newTrackAdded = true;
+    notifyListeners();
   }
 
   int getCurrentTrackId() {

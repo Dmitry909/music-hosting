@@ -70,8 +70,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
     // Would be implemented
   }
 
-  void nextTrack() {
-    // Would be implemented
+  void nextTrack(playerData) {
+    playerData.goToNextTrack();
   }
 
   String formatTime(Duration duration) {
@@ -107,7 +107,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
           ),
           IconButton(
             icon: const Icon(Icons.skip_next),
-            onPressed: nextTrack,
+            onPressed: () {
+              nextTrack(playerData);
+            },
           ),
           Expanded(
             child: Slider(
