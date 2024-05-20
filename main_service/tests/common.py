@@ -3,8 +3,8 @@ import json
 import os.path
 import filecmp
 
-host = 'http://localhost:3000'
-
+# host = 'http://localhost:3000'
+host = 'http://158.160.49.125:3000'
 
 def signup(username: str, password: str):
     json_data = {"username": username, "password": password}
