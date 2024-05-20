@@ -27,7 +27,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
         await http.get(Uri.parse('http://localhost:3000/search?query=$query'));
 
     if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
+      List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
       return List<Map<String, dynamic>>.from(data);
     } else {
       throw Exception('Failed to load Ids');

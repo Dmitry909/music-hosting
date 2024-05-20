@@ -21,14 +21,25 @@ Future<String?> getToken() async {
   return prefs.getString('authToken');
 }
 
+class TrackInfo {
+  int id = 0;
+  String name = "";
+  String authorUsername = "";
+  int cntRates = 0;
+  int sumRates = 0;
+
+  TrackInfo(
+      this.id, this.name, this.authorUsername, this.cntRates, this.sumRates);
+}
+
 class PlayerData with ChangeNotifier {
   int _currentPos = -1;
-  List<int> _history = [];
+  List<TrackInfo> _history = [];
   bool _newTrackAdded = false;
 
-  void setNewTrackId(int currentTrackId) {
+  void setNewTrack(TrackInfo newTrackInfo) {
     _history.clear();
-    _history.add(currentTrackId);
+    _history.add(newTrackInfo);
     _currentPos = 0;
     _newTrackAdded = true;
     notifyListeners();
@@ -60,17 +71,21 @@ class PlayerData with ChangeNotifier {
       headers: {'authorization': token},
     );
 
-    print(response.statusCode);
-
     if (response.statusCode == 200) {
       print(response.body);
-      Map<String, dynamic> data = jsonDecode(response.body);
+      Map<String, dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
+      print(data);
       if (data['id'] == null) {
         throw Exception('No id in response of get_next_track');
       }
       int id = data['id'];
+      String name = data['name'];
+      String authorUsername = data['author_username'];
+      int cntRates = data['cnt_rates'];
+      int sumRates = data['sum_rates'];
+      final trackInfo = TrackInfo(id, name, authorUsername, cntRates, sumRates);
 
-      _history.add(id);
+      _history.add(trackInfo);
       _currentPos += 1;
       _newTrackAdded = true;
       notifyListeners();
@@ -79,9 +94,9 @@ class PlayerData with ChangeNotifier {
     }
   }
 
-  int getCurrentTrackId() {
+  TrackInfo getCurrentTrackInfo() {
     if (_currentPos < 0 || _currentPos >= _history.length) {
-      return -1;
+      return TrackInfo(-1, "", "", 0, 0);
     }
     return _history[_currentPos];
   }

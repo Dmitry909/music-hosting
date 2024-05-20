@@ -16,6 +16,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
   bool isPlaying = false;
   Duration duration = const Duration();
   Duration position = const Duration();
+  String trackName = "";
+  String authorUsername = "";
 
   @override
   void initState() {
@@ -46,14 +48,14 @@ class _MusicPlayerState extends State<MusicPlayer> {
     super.dispose();
   }
 
-  void playMusic(playerData) async {
+  void playMusic(currentTrackInfo) async {
     print('Called playMusic');
-    final currentTrackId = playerData.getCurrentTrackId();
-    if (currentTrackId == -1) {
+    if (currentTrackInfo.id == -1) {
       return;
     }
-    await audioPlayer.play(
-        UrlSource('http://localhost:3000/download_track?id=$currentTrackId'));
+
+    await audioPlayer.play(UrlSource(
+        'http://localhost:3000/download_track?id=${currentTrackInfo.id}'));
     setState(() {
       isPlaying = true;
     });
@@ -73,12 +75,80 @@ class _MusicPlayerState extends State<MusicPlayer> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
+  Widget buildMusicPlayerRow(playerData, pos, dur) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Container(
+          width: 200.0,
+          child: Column(
+            children: [
+              Text(
+                trackName,
+                style: TextStyle(fontSize: 10),
+              ),
+              Text(
+                authorUsername,
+                style: TextStyle(fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.skip_previous),
+          onPressed: () {
+            playerData.goToPreviousTrack();
+          },
+        ),
+        IconButton(
+          icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+          onPressed: isPlaying
+              ? pauseMusic
+              : () {
+                  playMusic(playerData.getCurrentTrackInfo());
+                },
+        ),
+        IconButton(
+          icon: const Icon(Icons.skip_next),
+          onPressed: () {
+            playerData.goToNextTrack();
+          },
+        ),
+        Expanded(
+          child: Slider(
+            value: pos.inSeconds.toDouble(),
+            min: 0.0,
+            max: dur.inSeconds.toDouble(),
+            onChanged: (double value) {
+              // audioPlayer.seek(Duration(seconds: value.toInt()));
+            },
+          ),
+        ),
+        Text(
+          '${formatTime(pos)} / ${formatTime(dur)}',
+          style: const TextStyle(fontSize: 16),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final playerData = Provider.of<PlayerData>(context);
 
     if (playerData.releaseNewTrackAdded()) {
-      playMusic(playerData);
+      final currentTrackInfo = playerData.getCurrentTrackInfo();
+      setState(() {
+        trackName = currentTrackInfo.name;
+        if (trackName.length > 20) {
+          trackName = trackName.substring(0, 20) + "...";
+        }
+        authorUsername = currentTrackInfo.authorUsername;
+        if (authorUsername.length > 20) {
+          authorUsername = authorUsername.substring(0, 20) + "...";
+        }
+      });
+      playMusic(currentTrackInfo);
     }
 
     var pos = position;
@@ -88,43 +158,9 @@ class _MusicPlayerState extends State<MusicPlayer> {
     }
 
     return BottomAppBar(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
         children: [
-          IconButton(
-            icon: const Icon(Icons.skip_previous),
-            onPressed: () {
-              playerData.goToPreviousTrack();
-            },
-          ),
-          IconButton(
-            icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-            onPressed: isPlaying
-                ? pauseMusic
-                : () {
-                    playMusic(playerData);
-                  },
-          ),
-          IconButton(
-            icon: const Icon(Icons.skip_next),
-            onPressed: () {
-              playerData.goToNextTrack();
-            },
-          ),
-          Expanded(
-            child: Slider(
-              value: pos.inSeconds.toDouble(),
-              min: 0.0,
-              max: dur.inSeconds.toDouble(),
-              onChanged: (double value) {
-                // audioPlayer.seek(Duration(seconds: value.toInt()));
-              },
-            ),
-          ),
-          Text(
-            '${formatTime(pos)} / ${formatTime(dur)}',
-            style: const TextStyle(fontSize: 16),
-          ),
+          buildMusicPlayerRow(playerData, pos, dur),
         ],
       ),
     );
