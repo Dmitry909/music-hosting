@@ -125,10 +125,10 @@ def test_create_delete_get_playlist():
 
     # TODO: нужно еще проверять, правда ли такой трек вообще существует.
     # И здесь трек должен существовать
-    add_to_playlist(token, playlist_id, 123)
+    add_to_playlist(token, playlist_id, 1)
 
     tracks = get_playlist(playlist_id)
-    assert (tracks == [123])
+    assert (tracks == [1])
 
     delete_playlist_resp = delete_playlist(token, playlist_id)
     assert (delete_playlist_resp.status_code == 200)
