@@ -3,6 +3,7 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 sudo -u postgres psql -c "CREATE DATABASE playlists_service;"
 sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'qwerty';"
+sudo chmod og+rX /home/admin
 sudo -u postgres psql -d playlists_service -f migrations/0001_create_table.sql
 
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
