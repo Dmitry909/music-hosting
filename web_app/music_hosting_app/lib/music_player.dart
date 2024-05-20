@@ -140,6 +140,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
       final currentTrackInfo = playerData.getCurrentTrackInfo();
       setState(() {
         trackName = currentTrackInfo.name;
+        print(trackName);
         if (trackName.length > 20) {
           trackName = trackName.substring(0, 20) + "...";
         }

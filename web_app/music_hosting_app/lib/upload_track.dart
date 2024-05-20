@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 
 import 'shared_state.dart';
@@ -22,7 +24,7 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
     if (result != null) {
       setState(() {
         _selectedFile = result.files.single;
-        _selectFileStatus = 'Selected file: ${_selectedFile?.path}';
+        _selectFileStatus = 'Selected file: ${_selectedFile?.name}';
       });
     }
   }
@@ -44,17 +46,35 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
     }
 
     String filename = _selectedFile?.name ?? "";
-    String pathToFile = _selectedFile?.path ?? "";
-    if (pathToFile == "") {
-      return;
+    Uint8List? fileBytes;
+    String? pathToFile;
+
+    print('Before checking kIsWeb');
+    print('kIsWeb:');
+    print(kIsWeb);
+    if (kIsWeb) {
+      fileBytes = _selectedFile?.bytes!;
+    } else {
+      pathToFile = _selectedFile?.path ?? "";
+      if (pathToFile == "") {
+        return;
+      }
     }
 
+    print('Checked kIsWeb');
+
     final formData = FormData.fromMap({
-      "file": await MultipartFile.fromFile(pathToFile, filename: filename),
-      "track_name": trackName
+      "track_name": trackName,
+      "file": kIsWeb
+          ? MultipartFile.fromBytes(fileBytes!, filename: filename)
+          : await MultipartFile.fromFile(pathToFile!, filename: filename),
     });
+
     final token = (await getToken())!;
-    final headers = {'authorization': token, "Content-Type": "multipart"};
+    final headers = {
+      'authorization': token,
+      "Content-Type": "multipart/form-data"
+    };
 
     try {
       Response response = await Dio().post(
@@ -71,8 +91,6 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
         });
       } else {
         final statusCode = response.statusCode;
-        // final body = response.body;
-        // setState(() {_uploadTrackResult = 'Upload failed. response status code: $statusCode, body: $body';});
         setState(() {
           _uploadTrackResult =
               'Upload failed. response status code: $statusCode';
