@@ -16,21 +16,19 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 
 struct AppState {
+    GET_RANDOM_TRACK_ID_EP: String,
     // TODO store map<user, queue>
 }
 
-pub async fn create_app() -> Router {
-    let shared_state = Arc::new(AppState {});
+static mut TRACKS_HOST: String = String::new();
+static mut GET_RANDOM_TRACK_ID_EP: String = String::new();
+
+pub async fn create_app(tracks_host: String) -> Router {
+    let shared_state = Arc::new(AppState { GET_RANDOM_TRACK_ID_EP: format!("{}/get_random_track_id", tracks_host)});
     Router::new()
         .route("/get_next_track", get(get_next_track))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
         .with_state(shared_state)
-}
-
-const TRACKS_HOST: &str = "http://localhost:3002";
-
-lazy_static! {
-    pub static ref GET_RANDOM_TRACK_ID_EP: String = format!("{}/get_random_track_id", TRACKS_HOST);
 }
 
 async fn send_requests_with_timeouts<ParamsType: Serialize, InputJsonType: Serialize>(
@@ -92,7 +90,7 @@ async fn get_next_track(
     State(state): State<Arc<AppState>>,
 ) -> Response {
     send_requests_with_timeouts(
-        &GET_RANDOM_TRACK_ID_EP,
+        &state.GET_RANDOM_TRACK_ID_EP,
         &reqwest::Method::GET,
         {},
         HeaderMap::new(),
