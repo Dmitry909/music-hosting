@@ -46,8 +46,6 @@ class PlayerData with ChangeNotifier {
   }
 
   void goToPreviousTrack() {
-    print('goToPreviousTrack called');
-    print(_currentPos);
     if (_currentPos >= 1) {
       _currentPos -= 1;
       _newTrackAdded = true;
@@ -56,7 +54,6 @@ class PlayerData with ChangeNotifier {
   }
 
   void goToNextTrack() async {
-    print('goToNextTrack called');
     if (_currentPos >= 0 && _currentPos + 1 < _history.length) {
       _currentPos += 1;
       _newTrackAdded = true;
@@ -72,9 +69,7 @@ class PlayerData with ChangeNotifier {
     );
 
     if (response.statusCode == 200) {
-      print(response.body);
       Map<String, dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
-      print(data);
       if (data['id'] == null) {
         throw Exception('No id in response of get_next_track');
       }

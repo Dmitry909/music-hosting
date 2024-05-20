@@ -49,9 +49,6 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
     Uint8List? fileBytes;
     String? pathToFile;
 
-    print('Before checking kIsWeb');
-    print('kIsWeb:');
-    print(kIsWeb);
     if (kIsWeb) {
       fileBytes = _selectedFile?.bytes!;
     } else {
@@ -60,8 +57,6 @@ class _UploadTrackPageState extends State<UploadTrackPage> {
         return;
       }
     }
-
-    print('Checked kIsWeb');
 
     final formData = FormData.fromMap({
       "track_name": trackName,
