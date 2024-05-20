@@ -9,46 +9,61 @@ use axum::{
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use reqwest;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::{any::Any, str};
 use tokio::time::timeout;
 use tokio::time::Duration;
 
+struct AppState {
+    SIGNUP_EP: String,
+    LOGIN_EP: String,
+    LOGOUT_EP: String,
+    DELETE_ACCOUNT_EP_AUTH: String,
+    CHECK_TOKEN_EP: String,
+    SEARCH_EP_AUTH: String,
+    UPLOAD_TRACK_EP: String,
+    DELETE_ACCOUNT_EP_TRACKS: String,
+    DELETE_TRACK_EP: String,
+    DOWNLOAD_TRACK_EP: String,
+    SEARCH_EP_TRACKS: String,
+    CREATE_PLAYLIST_EP: String,
+    DELETE_PLAYLIST_EP: String,
+    ADD_TO_PLAYLIST_EP: String,
+    DELETE_FROM_PLAYLIST_EP: String,
+    GET_PLAYLIST_EP: String,
+    SEARCH_EP_PLAYLISTS: String,
+    DELETE_ACCOUNT_EP_PLAYLISTS: String,
+    PLAY_TRACK_EP: String,
+    GET_NEXT_TRACK_EP: String,
+}
+
 #[macro_use]
 extern crate lazy_static;
 
-const AUTH_HOST: &str = "http://localhost:3001";
-const TRACKS_HOST: &str = "http://localhost:3002";
-const PLAYLISTS_HOST: &str = "http://localhost:3003";
-const QUEUE_HOST: &str = "http://localhost:3004";
+pub async fn create_app(AUTH_HOST: &str, TRACKS_HOST: &str, PLAYLISTS_HOST: &str, QUEUE_HOST: &str) -> Router {
+    let shared_state = Arc::new(AppState {
+        SIGNUP_EP: format!("{}/signup", AUTH_HOST),
+        LOGIN_EP: format!("{}/login", AUTH_HOST),
+        LOGOUT_EP: format!("{}/logout", AUTH_HOST),
+        DELETE_ACCOUNT_EP_AUTH: format!("{}/delete_account", AUTH_HOST),
+        CHECK_TOKEN_EP: format!("{}/check_token", AUTH_HOST),
+        SEARCH_EP_AUTH: format!("{}/search", AUTH_HOST),
+        UPLOAD_TRACK_EP: format!("{}/upload_track", TRACKS_HOST),
+        DELETE_ACCOUNT_EP_TRACKS: format!("{}/delete_account", TRACKS_HOST),
+        DELETE_TRACK_EP: format!("{}/delete_track", TRACKS_HOST),
+        DOWNLOAD_TRACK_EP: format!("{}/download_track", TRACKS_HOST),
+        SEARCH_EP_TRACKS: format!("{}/search", TRACKS_HOST),
+        CREATE_PLAYLIST_EP: format!("{}/create_playlist", PLAYLISTS_HOST),
+        DELETE_PLAYLIST_EP: format!("{}/delete_playlist", PLAYLISTS_HOST),
+        ADD_TO_PLAYLIST_EP: format!("{}/add_to_playlist", PLAYLISTS_HOST),
+        DELETE_FROM_PLAYLIST_EP: format!("{}/delete_from_playlist", PLAYLISTS_HOST),
+        GET_PLAYLIST_EP: format!("{}/get_playlist", PLAYLISTS_HOST),
+        SEARCH_EP_PLAYLISTS: format!("{}/search", PLAYLISTS_HOST),
+        DELETE_ACCOUNT_EP_PLAYLISTS: format!("{}/delete_playlist", PLAYLISTS_HOST),
+        PLAY_TRACK_EP: format!("{}/play_track", QUEUE_HOST),
+        GET_NEXT_TRACK_EP: format!("{}/get_next_track", QUEUE_HOST),
+    });
 
-// EP = ENDPOINT
-lazy_static! {
-    pub static ref SIGNUP_EP: String = format!("{}/signup", AUTH_HOST);
-    pub static ref LOGIN_EP: String = format!("{}/login", AUTH_HOST);
-    pub static ref LOGOUT_EP: String = format!("{}/logout", AUTH_HOST);
-    pub static ref DELETE_ACCOUNT_EP_AUTH: String = format!("{}/delete_account", AUTH_HOST);
-    pub static ref CHECK_TOKEN_EP: String = format!("{}/check_token", AUTH_HOST);
-    pub static ref SEARCH_EP_AUTH: String = format!("{}/search", AUTH_HOST);
-    //
-    pub static ref UPLOAD_TRACK_EP: String = format!("{}/upload_track", TRACKS_HOST);
-    pub static ref DELETE_ACCOUNT_EP_TRACKS: String = format!("{}/delete_account", TRACKS_HOST);
-    pub static ref DELETE_TRACK_EP: String = format!("{}/delete_track", TRACKS_HOST);
-    pub static ref DOWNLOAD_TRACK_EP: String = format!("{}/download_track", TRACKS_HOST);
-    pub static ref SEARCH_EP_TRACKS: String = format!("{}/search", TRACKS_HOST);
-    //
-    pub static ref CREATE_PLAYLIST_EP: String = format!("{}/create_playlist", PLAYLISTS_HOST);
-    pub static ref DELETE_PLAYLIST_EP: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
-    pub static ref ADD_TO_PLAYLIST_EP: String = format!("{}/add_to_playlist", PLAYLISTS_HOST);
-    pub static ref DELETE_FROM_PLAYLIST_EP: String = format!("{}/delete_from_playlist", PLAYLISTS_HOST);
-    pub static ref GET_PLAYLIST_EP: String = format!("{}/get_playlist", PLAYLISTS_HOST);
-    pub static ref SEARCH_EP_PLAYLISTS: String = format!("{}/search", PLAYLISTS_HOST);
-    pub static ref DELETE_ACCOUNT_EP_PLAYLISTS: String = format!("{}/delete_playlist", PLAYLISTS_HOST);
-    //
-    pub static ref PLAY_TRACK_EP: String = format!("{}/play_track", QUEUE_HOST);
-    pub static ref GET_NEXT_TRACK_EP: String = format!("{}/get_next_track", QUEUE_HOST);
-}
-
-pub async fn create_app() -> Router {
     Router::new()
         // .route("/", get(root_handler))
         .route("/signup", post(signup))
@@ -73,6 +88,7 @@ pub async fn create_app() -> Router {
         //
         .route("/delete_account", delete(delete_account))
         .layer(DefaultBodyLimit::max(50 * 1024 * 1024))
+        .with_state(shared_state)
 }
 
 // async fn root_handler() -> Result<impl IntoResponse, impl IntoResponse> {
@@ -281,9 +297,12 @@ async fn send_requests_with_timeouts_reqwest<ParamsType: Serialize, InputJsonTyp
     Err(StatusCode::SERVICE_UNAVAILABLE)
 }
 
-async fn signup(Json(input_payload): Json<SignupRequest>) -> Response {
+async fn signup(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<SignupRequest>,
+) -> Response {
     send_requests_with_timeouts(
-        &SIGNUP_EP,
+        &state.SIGNUP_EP,
         &reqwest::Method::POST,
         {},
         HeaderMap::new(),
@@ -293,9 +312,12 @@ async fn signup(Json(input_payload): Json<SignupRequest>) -> Response {
     .await
 }
 
-async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
+async fn login(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<LoginRequest>,
+) -> Response {
     send_requests_with_timeouts(
-        &LOGIN_EP,
+        &state.LOGIN_EP,
         &reqwest::Method::POST,
         {},
         HeaderMap::new(),
@@ -305,9 +327,9 @@ async fn login(Json(input_payload): Json<LoginRequest>) -> Response {
     .await
 }
 
-async fn logout(headers: HeaderMap) -> Response {
+async fn logout(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     send_requests_with_timeouts(
-        &LOGOUT_EP,
+        &state.LOGOUT_EP,
         &reqwest::Method::POST,
         {},
         headers,
@@ -317,9 +339,9 @@ async fn logout(headers: HeaderMap) -> Response {
     .await
 }
 
-async fn check_token(headers: HeaderMap) -> Response {
+async fn check_token(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     send_requests_with_timeouts(
-        &CHECK_TOKEN_EP,
+        &state.CHECK_TOKEN_EP,
         &reqwest::Method::GET,
         {},
         headers,
@@ -361,7 +383,10 @@ async fn send_one_request<InputJsonType: Serialize>(
     }
 }
 
-async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Response {
+async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    Json(input_payload): Json<DeleteAccountRequest>,
+) -> Response {
     // TODO send to all other services:
     // 0) respond to user immediately, all next requests do in separate threads
     // 1) auth service (delete line with user from db there)
@@ -373,7 +398,7 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
     // TODO сделать асинхронным
 
     let auth_resp = send_one_request(
-        &DELETE_ACCOUNT_EP_AUTH,
+        &state.DELETE_ACCOUNT_EP_AUTH,
         &reqwest::Method::DELETE,
         HeaderMap::new(),
         &input_payload,
@@ -397,7 +422,7 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
 
     // TODO этот запрос слать уже в другом треде, пользователю ответить сразу
     send_requests_with_timeouts(
-        &DELETE_ACCOUNT_EP_TRACKS,
+        &state.DELETE_ACCOUNT_EP_TRACKS,
         &reqwest::Method::DELETE,
         {},
         HeaderMap::new(),
@@ -409,9 +434,12 @@ async fn delete_account(Json(input_payload): Json<DeleteAccountRequest>) -> Resp
     return (StatusCode::OK).into_response();
 }
 
-async fn resolve_username_from_token(headers: HeaderMap) -> Result<String, Response> {
+async fn resolve_username_from_token(
+    state: &Arc<AppState>,
+    headers: HeaderMap,
+) -> Result<String, Response> {
     let auth_resp = send_requests_with_timeouts_reqwest(
-        &CHECK_TOKEN_EP,
+        &state.CHECK_TOKEN_EP,
         &reqwest::Method::GET,
         {},
         headers,
@@ -450,8 +478,12 @@ async fn resolve_username_from_token(headers: HeaderMap) -> Result<String, Respo
     Ok(username)
 }
 
-async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+async fn upload_track(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> Response {
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -487,7 +519,7 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
 
     let client = reqwest::Client::new();
     let response = client
-        .post(UPLOAD_TRACK_EP.as_str())
+        .post(state.UPLOAD_TRACK_EP.as_str())
         .multipart(form)
         .send()
         .await;
@@ -503,10 +535,11 @@ async fn upload_track(headers: HeaderMap, mut multipart: Multipart) -> Response 
 }
 
 async fn delete_track(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<DeleteTrackRequest>,
 ) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -522,7 +555,7 @@ async fn delete_track(
     };
 
     send_requests_with_timeouts(
-        &DELETE_TRACK_EP,
+        &state.DELETE_TRACK_EP,
         &reqwest::Method::DELETE,
         {},
         HeaderMap::new(),
@@ -532,9 +565,12 @@ async fn delete_track(
     .await
 }
 
-async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
+async fn download_track(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<DownloadTrackParams>,
+) -> Response {
     send_requests_with_timeouts(
-        &DOWNLOAD_TRACK_EP,
+        &state.DOWNLOAD_TRACK_EP,
         &reqwest::Method::GET,
         params,
         HeaderMap::new(),
@@ -545,10 +581,11 @@ async fn download_track(Query(params): Query<DownloadTrackParams>) -> Response {
 }
 
 async fn create_playlist(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<CreatePlaylistRequest>,
 ) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -562,7 +599,7 @@ async fn create_playlist(
     };
 
     send_requests_with_timeouts(
-        &CREATE_PLAYLIST_EP,
+        &state.CREATE_PLAYLIST_EP,
         &reqwest::Method::POST,
         {},
         HeaderMap::new(),
@@ -573,10 +610,11 @@ async fn create_playlist(
 }
 
 async fn delete_playlist(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<DeletePlaylistRequest>,
 ) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -590,7 +628,7 @@ async fn delete_playlist(
     };
 
     send_requests_with_timeouts(
-        &DELETE_PLAYLIST_EP,
+        &state.DELETE_PLAYLIST_EP,
         &reqwest::Method::DELETE,
         {},
         HeaderMap::new(),
@@ -601,10 +639,11 @@ async fn delete_playlist(
 }
 
 async fn add_to_playlist(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<AddToPlaylistRequest>,
 ) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -621,7 +660,7 @@ async fn add_to_playlist(
     };
 
     send_requests_with_timeouts(
-        &ADD_TO_PLAYLIST_EP,
+        &state.ADD_TO_PLAYLIST_EP,
         &reqwest::Method::PUT,
         {},
         HeaderMap::new(),
@@ -632,10 +671,11 @@ async fn add_to_playlist(
 }
 
 async fn delete_from_playlist(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(input_payload): Json<DeleteFromPlaylistRequest>,
 ) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -650,7 +690,7 @@ async fn delete_from_playlist(
     };
 
     send_requests_with_timeouts(
-        &DELETE_FROM_PLAYLIST_EP,
+        &state.DELETE_FROM_PLAYLIST_EP,
         &reqwest::Method::DELETE,
         {},
         HeaderMap::new(),
@@ -660,9 +700,12 @@ async fn delete_from_playlist(
     .await
 }
 
-async fn get_playlist(Query(params): Query<GetPlaylistParams>) -> Response {
+async fn get_playlist(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<GetPlaylistParams>,
+) -> Response {
     send_requests_with_timeouts(
-        &GET_PLAYLIST_EP,
+        &state.GET_PLAYLIST_EP,
         &reqwest::Method::GET,
         params,
         HeaderMap::new(),
@@ -672,9 +715,12 @@ async fn get_playlist(Query(params): Query<GetPlaylistParams>) -> Response {
     .await
 }
 
-async fn search(Query(params): Query<SearchParams>) -> Response {
+async fn search(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<SearchParams>,
+) -> Response {
     send_requests_with_timeouts(
-        &SEARCH_EP_TRACKS,
+        &state.SEARCH_EP_TRACKS,
         &reqwest::Method::GET,
         params,
         HeaderMap::new(),
@@ -684,10 +730,8 @@ async fn search(Query(params): Query<SearchParams>) -> Response {
     .await
 }
 
-async fn get_next_track(
-    headers: HeaderMap,
-) -> Response {
-    let resolve_result = resolve_username_from_token(headers).await;
+async fn get_next_track(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+    let resolve_result = resolve_username_from_token(&state, headers).await;
     let username = match resolve_result {
         Ok(username) => username,
         Err(response) => {
@@ -697,7 +741,7 @@ async fn get_next_track(
 
     // TODO this request must be sent with username
     send_requests_with_timeouts(
-        &GET_NEXT_TRACK_EP,
+        &state.GET_NEXT_TRACK_EP,
         &reqwest::Method::GET,
         {},
         HeaderMap::new(),
