@@ -3,10 +3,6 @@ name = "tracks_service"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "tracks_service"
-path = "src/main.rs"
-
 [dependencies]
 chrono = "0.4.37"
 jsonwebtoken = "9.3.0"
