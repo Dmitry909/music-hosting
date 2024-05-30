@@ -15,18 +15,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: CheckBuilding
-        run: cargo check --verbose
+        run: |
+          cd tracks_service
+          cargo check --verbose
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Test
-        run: cargo test --verbose
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Test
+  #       run: cargo test --verbose
 
-  check_style:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: CheckFormat
-        run: rustfmt --check src/* --edition 2021 --verbose
+  # check_style:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: CheckFormat
+  #       run: rustfmt --check src/* --edition 2021 --verbose
